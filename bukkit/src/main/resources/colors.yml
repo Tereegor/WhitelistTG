@@ -1,0 +1,46 @@
+# ========================================
+# WhitelistTG - Color Scheme
+# ========================================
+# Uses MiniMessage format
+
+colors:
+  # Primary colors
+  primary: "<#FF6B35>"
+  secondary: "<#004E89>"
+  accent: "<#1A659E>"
+  highlight: "<#FFA500>"
+  
+  # Status colors
+  success: "<#2ECC71>"
+  error: "<#E74C3C>"
+  warning: "<#F39C12>"
+  info: "<#3498DB>"
+  
+  # Text colors
+  text: "<#ECF0F1>"
+  text-secondary: "<#95A5A6>"
+  text-muted: "<#7F8C8D>"
+  text-bright: "<#FFFFFF>"
+  
+  # Special colors
+  gold: "<#FFD700>"
+  purple: "<#9B59B6>"
+  cyan: "<#1ABC9C>"
+  pink: "<#E91E63>"
+  
+  # Server colors
+  duckhood: "<#FF6B35>"
+  duckburg: "<#1A659E>"
+  hub: "<#2ECC71>"
+  
+  # Border colors
+  border: "<#34495E>"
+  border-light: "<#7F8C8D>"
+
+# Message templates with colors
+templates:
+  prefix: "<gray>[<gold>WhitelistTG<gray>] "
+  success-text: "<success>"
+  error-text: "<error>"
+  warning-text: "<warning>"
+  info-text: "<info>"

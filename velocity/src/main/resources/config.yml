@@ -1,0 +1,47 @@
+# ========================================
+# WhitelistTG Velocity Configuration
+# ========================================
+
+# Language (ru/en)
+language: ru
+
+# Messages
+messages:
+  # Kick message when player is not whitelisted
+  # Placeholders: %player%, %server%
+  kick-message: "&cУ вас нет доступа к серверу &6%server%&c!\n&7Получите проходку через Telegram бот."
+  
+  # Message when server has whitelist disabled
+  whitelist-disabled: "&aВайтлист на сервере &6%server% &aотключен."
+
+# Servers that bypass whitelist check (e.g., lobby)
+bypass-servers:
+  - lobby
+  - hub
+
+# Database settings (should match Bukkit plugin)
+storage: H2
+
+database:
+  host: localhost
+  port: 3306
+  database: whitelist
+  username: root
+  password: ""
+  pool:
+    maximum-pool-size: 10
+    minimum-idle: 2
+    connection-timeout: 30000
+    idle-timeout: 600000
+    max-lifetime: 1800000
+
+# Cache settings
+cache:
+  # Cache TTL in seconds
+  ttl: 60
+  # Maximum cache entries
+  max-size: 1000
+
+# Debug mode
+debug: false
+

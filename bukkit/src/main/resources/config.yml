@@ -1,0 +1,66 @@
+# ========================================
+# WhitelistTG Configuration
+# ========================================
+
+# Server name - unique identifier for this server
+server-name: "MyServer"
+
+# Display name for messages (can include colors with &)
+server-display-name: "&6MyServer"
+
+# Language (ru/en)
+language: ru
+
+# Whitelist settings
+whitelist:
+  # Is whitelist enabled on this server?
+  enabled: true
+  
+  # Auto-add players to whitelist when they join (if enabled)
+  # When true: players are automatically added to whitelist when they join
+  # When false: players are kicked if not whitelisted (default behavior)
+  auto-add: false
+  
+  # Kick message when player is not whitelisted (only used if auto-add is false)
+  # Placeholders: %player%, %server%
+  # Uses MiniMessage format - supports colors from colors.yml
+  kick-message: "<error>Вы не в вайтлисте сервера <primary><server>!\n<text-secondary>Обратитесь к администрации для получения доступа."
+  
+  # Code expiration time in minutes (default: 30)
+  code-expiration-minutes: 30
+
+# Telegram bot settings
+telegram:
+  # Enable Telegram bot integration
+  enabled: true
+  
+  # Server rules (shown when user sends /start)
+  rules: |
+    <b>ПРАВИЛА СЕРВЕРА</b>
+    
+    https://docs.google.com/document/d/1g8fAFhybBXvkQiRmagHuIL7TlonVxACez7QwDKKE9Ko/edit?tab=t.boc9wd15qkep#heading=h.wyeycodlzf7c
+    
+    Нажимая на кнопку ниже, вы подтверждаете, что прочитали правила и согласны с ними.
+
+# Database settings
+storage: SQLITE
+
+database:
+  host: localhost
+  port: 3306
+  database: whitelist
+  username: root
+  password: ""
+  pool:
+    maximum-pool-size: 10
+    minimum-idle: 2
+    connection-timeout: 30000
+    idle-timeout: 600000
+    max-lifetime: 1800000
+
+# Heartbeat interval in seconds (for Velocity sync)
+heartbeat-interval: 30
+
+# Debug mode
+debug: false
+

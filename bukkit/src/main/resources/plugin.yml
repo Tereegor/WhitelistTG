@@ -1,0 +1,34 @@
+name: WhitelistTG
+version: ${project.version}
+main: ru.tereegor.whitelist.bukkit.WhitelistPlugin
+authors: [Math_Tereegor]
+description: Multi-server whitelist with Telegram integration
+website: https://github.com/Tereegor/whitelist-with-tg
+
+api-version: '1.21'
+api: '1.21'
+
+commands:
+  wlt:
+    description: Main whitelist command
+    usage: /<command> <add|remove|list|info|on|off|reload> [args...]
+    permission: whitelist.admin
+  code:
+    description: Activate whitelist code
+    usage: /<command> <code>
+  invite:
+    description: Invite a player to whitelist
+    usage: /<command> <nickname> [reason]
+    permission: whitelist.invite
+
+permissions:
+  whitelist.admin:
+    description: Full whitelist administration
+    default: op
+  whitelist.invite:
+    description: Can invite players
+    default: false
+  whitelist.bypass:
+    description: Bypass whitelist check
+    default: op
+

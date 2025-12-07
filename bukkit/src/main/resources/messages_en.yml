@@ -1,0 +1,103 @@
+# ========================================
+# WhitelistTG - English Messages
+# ========================================
+# Format: <color_name> for colors from colors.yml
+
+prefix: "<gray>[<gold>WhitelistTG<gray>] "
+
+# General messages
+general:
+  no-permission: "<error>✗ You don't have permission for this action."
+  player-only: "<error>✗ This command is for players only."
+  player-not-found: "<error>✗ Player not found: <warning><player>"
+  invalid-args: "<error>✗ Invalid arguments. Use: <info><usage>"
+  reload-success: "<success>✓ Configuration reloaded!"
+
+# Whitelist messages
+enabled: "<success>✓ Whitelist enabled!"
+disabled: "<error>✗ Whitelist disabled!"
+status-on: "<success>✓ Whitelist is currently enabled"
+status-off: "<error>✗ Whitelist is currently disabled"
+
+# Auto-add
+autoadd-enabled: "<success>✓ Auto-add enabled!"
+autoadd-disabled: "<error>✗ Auto-add disabled!"
+autoadd-status-on: "<info>ℹ Auto-add: <success>enabled"
+autoadd-status-off: "<info>ℹ Auto-add: <error>disabled"
+autoadd-already-on: "<warning>⚠ Auto-add is already enabled!"
+autoadd-already-off: "<warning>⚠ Auto-add is already disabled!"
+autoadd-confirm-enable: "<warning>⚠ You are about to enable auto-add."
+autoadd-confirm-disable: "<warning>⚠ You are about to disable auto-add."
+autoadd-confirm-hint: "<text-secondary>Type <info>/wlt confirm <text-secondary>to confirm."
+autoadd-no-confirmation: "<error>✗ No pending confirmations."
+
+# Add/Remove
+added: "<success>✓ Player <gold><player> added to whitelist of server <primary><server>!"
+auto-added: "<info>ℹ You have been automatically added to whitelist of server <primary><server>!"
+already-added: "<warning>⚠ Player <gold><player> is already whitelisted."
+removed: "<error>✗ Player <gold><player> removed from whitelist of server <primary><server>!"
+not-found: "<error>✗ Player <gold><player> not found in whitelist."
+
+# List
+list-header: "<gold>═══ Whitelist of server <primary><server> <gray>(<text><count><gray>) <gold>═══"
+list-entry: "<text-secondary>│ <gold><player> <text-secondary>│ <text><type> <text-secondary>│ <text-secondary>Added by: <gold><added_by>"
+list-empty: "<text-muted>Whitelist is empty."
+list-footer: "<gold>Page <info><page><text-secondary>/<info><total>"
+
+# Info
+info-header: "<gold>═══ Information about <primary><player> <gold>═══"
+info-server: "<text-secondary>Server: <info><server>"
+info-type: "<text-secondary>Registration type: <info><type>"
+info-reason: "<text-secondary>Reason: <info><reason>"
+info-added-by: "<text-secondary>Added by: <info><added_by>"
+info-date: "<text-secondary>Date added: <info><date>"
+info-no-entries: "<error>✗ Player has no entries in whitelist."
+
+# Code activation
+code:
+  usage: "<error>✗ Usage: <info>/code <code>"
+  invalid: "<error>✗ Invalid or expired code!"
+  already-whitelisted: "<warning>⚠ You are already whitelisted on this server!"
+  success: "<success>✓ You have successfully activated the code!"
+  success-details: "<text-secondary>Welcome to <primary><server>!"
+  linked: "<success>✓ Your account has been linked to Telegram!"
+
+# Invite command
+invite:
+  usage: "<error>✗ Usage: <info>/invite <nickname> [reason]"
+  success: "<success>✓ Player <gold><player> invited to server <primary><server>!"
+  success-reason: "<text-secondary>Reason: <info><reason>"
+  already-invited: "<warning>⚠ Player <gold><player> is already whitelisted."
+
+# Admin notifications
+notify:
+  player-invited: "<info>ℹ <inviter> <text-secondary>invited <gold><player> <text-secondary>to the server. Reason: <info><reason>"
+
+# Command help
+help:
+  header: "<gold>═══ WhitelistTG Commands ═══"
+  wl-add: "<gold>• /wlt add <name | uuid> <value> [reason] <text-secondary>→ Add player"
+  wl-remove: "<gold>• /wlt remove <name | uuid> <value> <text-secondary>→ Remove player"
+  wl-list: "<gold>• /wlt list [page] <text-secondary>→ List players"
+  wl-info: "<gold>• /wlt info <nickname> <text-secondary>→ Player information"
+  wl-on: "<gold>• /wlt on <text-secondary>→ Enable whitelist"
+  wl-off: "<gold>• /wlt off <text-secondary>→ Disable whitelist"
+  wl-autoadd: "<gold>• /wlt autoadd <on | off> <text-secondary>→ Manage auto-add"
+  wl-reload: "<gold>• /wlt reload <text-secondary>→ Reload config"
+  code: "<gold>• /code <code> <text-secondary>→ Activate code"
+  invite: "<gold>• /invite <nickname> [reason] <text-secondary>→ Invite player"
+
+# Telegram bot messages
+telegram:
+  accept-button: "I accept the rules"
+  already-linked: "Your account is already linked to player: <player>"
+  request-nickname: "Please enter your Minecraft nickname:\n\nMake sure the nickname is correct, otherwise the code won't work!"
+  nickname-empty: "Nickname cannot be empty. Please try again."
+  nickname-length: "Nickname must be between 3 and 16 characters. Please try again."
+  nickname-invalid: "Nickname can only contain letters, numbers and underscores. Please try again."
+  nickname-taken: "Nickname \"<nickname>\" is already taken. Please enter another nickname:"
+  code-generation-error: "Code generation error. Please try again later."
+  code-message: "Your registration code:\n\n<code><code></code>\n\nPlayer: <b><player></b>\n\nJoin the server and enter the command:\n<code>/code <code></code>\n\nCode is valid for <minutes> minutes."
+  player-name-not-specified: "Not specified"
+  no-active-code: "You don't have an active code. Press /start to get a new code."
+  help-message: "Available commands:\n\n/start - Start registration\n/code - Show current code\n/help - Show this help\n\nServer: <server>"

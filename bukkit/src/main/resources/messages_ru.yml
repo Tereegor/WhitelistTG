@@ -1,0 +1,104 @@
+# ========================================
+# WhitelistTG - Russian Messages
+# ========================================
+# Использует цвета из colors.yml
+# Формат: <color_name> для цветов из colors.yml
+
+prefix: "<gray>[<gold>WhitelistTG<gray>] "
+
+# General messages
+general:
+  no-permission: "<error>У вас нет прав для этого действия."
+  player-only: "<error>Эта команда только для игроков."
+  player-not-found: "<error>Игрок не найден: <warning><player>"
+  invalid-args: "<error>Неверные аргументы. Используйте: <info><usage>"
+  reload-success: "<success>Конфигурация перезагружена!"
+
+# Whitelist messages
+enabled: "<success>Вайтлист включен!"
+disabled: "<error>Вайтлист выключен!"
+status-on: "<success>Вайтлист сейчас включен"
+status-off: "<error>Вайтлист сейчас выключен"
+
+# Auto-add
+autoadd-enabled: "<success>Автодобавление включено!"
+autoadd-disabled: "<error>Автодобавление выключено!"
+autoadd-status-on: "<info>ℹ Автодобавление: <success>включено"
+autoadd-status-off: "<info>ℹ Автодобавление: <error>выключено"
+autoadd-already-on: "<warning>⚠ Автодобавление уже включено!"
+autoadd-already-off: "<warning>⚠ Автодобавление уже выключено!"
+autoadd-confirm-enable: "<warning>⚠ Вы собираетесь включить автодобавление."
+autoadd-confirm-disable: "<warning>⚠ Вы собираетесь выключить автодобавление."
+autoadd-confirm-hint: "<text-secondary>Введите <info>/wlt confirm <text-secondary>для подтверждения."
+autoadd-no-confirmation: "<error>Нет ожидающих подтверждений."
+
+# Add/Remove
+added: "<success>Игрок <gold><player> добавлен в вайтлист сервера <primary><server>!"
+auto-added: "<info>ℹ Вы автоматически добавлены в вайтлист сервера <primary><server>!"
+already-added: "<warning>⚠ Игрок <gold><player> уже в вайтлисте."
+removed: "<error>Игрок <gold><player> удален из вайтлиста сервера <primary><server>!"
+not-found: "<error>Игрок <gold><player> не найден в вайтлисте."
+
+# List
+list-header: "<gold>═══ Вайтлист сервера <primary><server> <gray>(<text><count><gray>) <gold>═══"
+list-entry: "<text-secondary>│ <gold><player> <text-secondary>│ <text><type> <text-secondary>│ <text-secondary>Добавил: <gold><added_by>"
+list-empty: "<text-muted>Вайтлист пуст."
+list-footer: "<gold>Страница <info><page><text-secondary>/<info><total>"
+
+# Info
+info-header: "<gold>═══ Информация о <primary><player> <gold>═══"
+info-server: "<text-secondary>Сервер: <info><server>"
+info-type: "<text-secondary>Тип регистрации: <info><type>"
+info-reason: "<text-secondary>Причина: <info><reason>"
+info-added-by: "<text-secondary>Добавил: <info><added_by>"
+info-date: "<text-secondary>Дата добавления: <info><date>"
+info-no-entries: "<error>У игрока нет записей в вайтлисте."
+
+# Code activation
+code:
+  usage: "<error>Использование: <info>/code <код>"
+  invalid: "<error>Неверный или истекший код!"
+  already-whitelisted: "<warning>⚠ Вы уже в вайтлисте этого сервера!"
+  success: "<success>Вы успешно активировали код!"
+  success-details: "<text-secondary>Добро пожаловать на <primary><server>!"
+  linked: "<success>Ваш аккаунт привязан к Telegram!"
+
+# Invite command
+invite:
+  usage: "<error>Использование: <info>/invite <ник> [причина]"
+  success: "<success>Игрок <gold><player> приглашен на сервер <primary><server>!"
+  success-reason: "<text-secondary>Причина: <info><reason>"
+  already-invited: "<warning>⚠ Игрок <gold><player> уже в вайтлисте."
+
+# Admin notifications
+notify:
+  player-invited: "<info>ℹ <inviter> <text-secondary>пригласил <gold><player> <text-secondary>на сервер. Причина: <info><reason>"
+
+# Command help
+help:
+  header: "<gold>═══ Команды WhitelistTG ═══"
+  wl-add: "<gold>• /wlt add <name | uuid> <значение> [причина] <text-secondary>→ Добавить игрока"
+  wl-remove: "<gold>• /wlt remove <name | uuid> <значение> <text-secondary>→ Удалить игрока"
+  wl-list: "<gold>• /wlt list [страница] <text-secondary>→ Список игроков"
+  wl-info: "<gold>• /wlt info <ник> <text-secondary>→ Информация об игроке"
+  wl-on: "<gold>• /wlt on <text-secondary>→ Включить вайтлист"
+  wl-off: "<gold>• /wlt off <text-secondary>→ Выключить вайтлист"
+  wl-autoadd: "<gold>• /wlt autoadd <on | off> <text-secondary>→ Управление автодобавлением"
+  wl-reload: "<gold>• /wlt reload <text-secondary>→ Перезагрузить конфиг"
+  code: "<gold>• /code <код> <text-secondary>→ Активировать код"
+  invite: "<gold>• /invite <ник> [причина] <text-secondary>→ Пригласить игрока"
+
+# Telegram bot messages
+telegram:
+  accept-button: "Принимаю правила"
+  already-linked: "Ваш аккаунт уже привязан к игроку: <player>"
+  request-nickname: "Пожалуйста, введите ваш игровой никнейм в Minecraft:\n\nУбедитесь, что ник указан правильно, иначе код не сработает!"
+  nickname-empty: "Никнейм не может быть пустым. Попробуйте снова."
+  nickname-length: "Никнейм должен быть от 3 до 16 символов. Попробуйте снова."
+  nickname-invalid: "Никнейм может содержать только буквы, цифры и подчеркивания. Попробуйте снова."
+  nickname-taken: "Никнейм \"<nickname>\" уже занят. Пожалуйста, введите другой никнейм:"
+  code-generation-error: "Ошибка генерации кода. Попробуйте позже."
+  code-message: "Ваш код для регистрации:\n\n<code><code></code>\n\nИгрок: <b><player></b>\n\nЗайдите на сервер и введите команду:\n<code>/code <code></code>\n\nКод действителен <minutes> минут."
+  player-name-not-specified: "Не указан"
+  no-active-code: "У вас нет активного кода. Нажмите /start для получения нового кода."
+  help-message: "Доступные команды:\n\n/start - Начать регистрацию\n/code - Показать текущий код\n/help - Показать эту справку\n\nСервер: <server>"
