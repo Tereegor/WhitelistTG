@@ -11,13 +11,9 @@ import ru.tereegor.whitelist.bukkit.manager.MessageManager;
 import ru.tereegor.whitelist.bukkit.manager.WhitelistManager;
 import ru.tereegor.whitelist.bukkit.telegram.TelegramBot;
 import ru.tereegor.whitelist.common.config.DatabaseConfig;
-import ru.tereegor.whitelist.common.model.ServerInfo;
 import ru.tereegor.whitelist.common.storage.SqlStorage;
 import ru.tereegor.whitelist.common.storage.StorageType;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 @Getter
 public class WhitelistPlugin extends JavaPlugin {
@@ -30,7 +26,6 @@ public class WhitelistPlugin extends JavaPlugin {
     private SqlStorage storage;
     private WhitelistManager whitelistManager;
     private TelegramBot telegramBot;
-    private ScheduledExecutorService scheduler;
     
     @Override
     public void onEnable() {
@@ -51,9 +46,6 @@ public class WhitelistPlugin extends JavaPlugin {
             
             this.whitelistManager = new WhitelistManager(this, storage);
             
-            registerServer();
-            getLogger().info("Server registered: " + pluginConfig.getServerName());
-            
             registerCommands();
             getLogger().info("Commands registered");
             
@@ -63,9 +55,6 @@ public class WhitelistPlugin extends JavaPlugin {
             if (pluginConfig.isTelegramEnabled()) {
                 startTelegramBot();
             }
-            
-            startHeartbeat();
-            getLogger().info("Heartbeat scheduler started");
             
             getLogger().info("WhitelistTG enabled successfully! Server: " + pluginConfig.getServerName());
         } catch (Exception e) {
@@ -78,10 +67,6 @@ public class WhitelistPlugin extends JavaPlugin {
     
     @Override
     public void onDisable() {
-        if (scheduler != null && !scheduler.isShutdown()) {
-            scheduler.shutdown();
-        }
-        
         if (telegramBot != null) {
             telegramBot.stop();
         }
@@ -121,16 +106,6 @@ public class WhitelistPlugin extends JavaPlugin {
         }
     }
     
-    private void registerServer() {
-        ServerInfo serverInfo = ServerInfo.builder()
-                .name(pluginConfig.getServerName())
-                .displayName(pluginConfig.getServerDisplayName())
-                .whitelistEnabled(pluginConfig.isWhitelistEnabled())
-                .build();
-        
-        storage.registerServer(serverInfo).join();
-    }
-    
     private void registerCommands() {
         var wlCommand = getCommand("wlt");
         if (wlCommand != null) {
@@ -165,31 +140,10 @@ public class WhitelistPlugin extends JavaPlugin {
         }
     }
     
-    private void startHeartbeat() {
-        scheduler = Executors.newSingleThreadScheduledExecutor();
-        int interval = getConfig().getInt("heartbeat-interval", 30);
-        
-        scheduler.scheduleAtFixedRate(() -> {
-            try {
-                storage.updateServerHeartbeat(pluginConfig.getServerName());
-                storage.updateServerWhitelistStatus(
-                        pluginConfig.getServerName(), 
-                        pluginConfig.isWhitelistEnabled()
-                );
-            } catch (Exception e) {
-                if (pluginConfig.isDebug()) {
-                    getLogger().warning("Heartbeat failed: " + e.getMessage());
-                }
-            }
-        }, interval, interval, TimeUnit.SECONDS);
-    }
-    
     public void reload() {
         reloadConfig();
         this.pluginConfig = new PluginConfig(this);
         this.messageManager = new MessageManager(this, pluginConfig.getLanguage());
-        
-        registerServer();
         
         if (telegramBot != null) {
             telegramBot.stop();

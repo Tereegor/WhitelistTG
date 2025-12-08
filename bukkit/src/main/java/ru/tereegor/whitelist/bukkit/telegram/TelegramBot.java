@@ -14,8 +14,6 @@ import ru.tereegor.whitelist.common.model.RegistrationCode;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class TelegramBot extends TelegramLongPollingBot {
     
@@ -25,7 +23,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     private TelegramBotsApi botsApi;
     private DefaultBotSession botSession;
     
-    private final Map<Long, Long> awaitingNickname = new ConcurrentHashMap<>();
     
     public TelegramBot(WhitelistPlugin plugin) {
         super(plugin.getPluginConfig().getTelegramToken());
@@ -85,13 +82,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void handleMessage(Update update) {
         String text = update.getMessage().getText();
         Long chatId = update.getMessage().getChatId();
-        Long userId = update.getMessage().getFrom().getId();
         String username = update.getMessage().getFrom().getUserName();
-        
-        if (awaitingNickname.containsKey(chatId)) {
-            handleNicknameInput(chatId, userId, username, text);
-            return;
-        }
         
         if (text.startsWith("/start")) {
             sendRulesMessage(chatId);
@@ -109,7 +100,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         String username = update.getCallbackQuery().getFrom().getUserName();
         
         if ("accept_rules".equals(callbackData)) {
-            requestNickname(chatId, userId, username);
+            generateAndSendCode(chatId, userId, username);
         }
     }
     
@@ -142,7 +133,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
     
-    private void requestNickname(Long chatId, Long userId, String username) {
+    private void generateAndSendCode(Long chatId, Long userId, String username) {
         plugin.getWhitelistManager().getLinkByTelegram(userId).thenAccept(optLink -> {
             if (optLink.isPresent()) {
                 String linkedMessage = messageManager.getRawTelegram("telegram.already-linked",
@@ -154,60 +145,27 @@ public class TelegramBot extends TelegramLongPollingBot {
             plugin.getWhitelistManager().getActiveCode(userId).thenAccept(optCode -> {
                 if (optCode.isPresent()) {
                     RegistrationCode existingCode = optCode.get();
-                    sendCodeMessage(chatId, existingCode.getCode(), existingCode.getPlayerName());
+                    sendCodeMessage(chatId, existingCode.getCode());
                     return;
                 }
                 
-                awaitingNickname.put(chatId, userId);
-                sendText(chatId, messageManager.getRaw("telegram.request-nickname"));
+                plugin.getWhitelistManager().generateCode(userId, username).thenAccept(code -> {
+                    sendCodeMessage(chatId, code.getCode());
+                }).exceptionally(e -> {
+                    sendText(chatId, messageManager.getRaw("telegram.code-generation-error"));
+                    plugin.getLogger().warning("Code generation error: " + e.getMessage());
+                    if (plugin.getPluginConfig().isDebug()) {
+                        e.printStackTrace();
+                    }
+                    return null;
+                });
             });
         });
     }
     
-    private void handleNicknameInput(Long chatId, Long userId, String username, String nickname) {
-        awaitingNickname.remove(chatId);
-        
-        if (nickname == null || nickname.trim().isEmpty()) {
-            sendText(chatId, messageManager.getRaw("telegram.nickname-empty"));
-            return;
-        }
-        
-        final String trimmedNickname = nickname.trim();
-        if (trimmedNickname.length() < 3 || trimmedNickname.length() > 16) {
-            sendText(chatId, messageManager.getRaw("telegram.nickname-length"));
-            awaitingNickname.put(chatId, userId);
-            return;
-        }
-        
-        if (!trimmedNickname.matches("^[a-zA-Z0-9_]+$")) {
-            sendText(chatId, messageManager.getRaw("telegram.nickname-invalid"));
-            awaitingNickname.put(chatId, userId);
-            return;
-        }
-        
-        plugin.getStorage().isNicknameTaken(trimmedNickname).thenAccept(taken -> {
-            if (taken) {
-                sendText(chatId, messageManager.getRawTelegram("telegram.nickname-taken",
-                        MessageManager.placeholder("nickname", trimmedNickname)));
-                awaitingNickname.put(chatId, userId);
-                return;
-            }
-            
-            plugin.getWhitelistManager().generateCode(userId, username, trimmedNickname).thenAccept(code -> {
-                sendCodeMessage(chatId, code.getCode(), code.getPlayerName());
-            }).exceptionally(e -> {
-                sendText(chatId, messageManager.getRaw("telegram.code-generation-error"));
-                plugin.getLogger().warning("Code generation error: " + e.getMessage());
-                return null;
-            });
-        });
-    }
-    
-    private void sendCodeMessage(Long chatId, String code, String playerName) {
+    private void sendCodeMessage(Long chatId, String code) {
         String message = messageManager.getRawTelegram("telegram.code-message",
                 MessageManager.placeholder("code", code),
-                MessageManager.placeholder("player", playerName != null ? playerName : 
-                        messageManager.getRaw("telegram.player-name-not-specified")),
                 MessageManager.placeholder("minutes", String.valueOf(
                         plugin.getPluginConfig().getCodeExpirationMinutes())));
         
@@ -220,22 +178,23 @@ public class TelegramBot extends TelegramLongPollingBot {
             execute(sendMessage);
         } catch (TelegramApiException e) {
             plugin.getLogger().warning("Failed to send code message: " + e.getMessage());
+            if (plugin.getPluginConfig().isDebug()) {
+                e.printStackTrace();
+            }
         }
     }
     
     private void sendExistingCode(Long chatId, String username) {
-        plugin.getWhitelistManager().getActiveCode(
-                plugin.getWhitelistManager().getLinkByTelegram(chatId)
-                        .join()
-                        .map(link -> link.getTelegramId())
-                        .orElse(chatId)
-        ).thenAccept(optCode -> {
-            if (optCode.isPresent()) {
-                sendCodeMessage(chatId, optCode.get().getCode(), 
-                        optCode.get().getPlayerName());
-            } else {
-                sendText(chatId, messageManager.getRaw("telegram.no-active-code"));
-            }
+        Long userId = chatId;
+        plugin.getWhitelistManager().getLinkByTelegram(userId).thenAccept(optLink -> {
+            Long telegramId = optLink.map(link -> link.getTelegramId()).orElse(userId);
+            plugin.getWhitelistManager().getActiveCode(telegramId).thenAccept(optCode -> {
+                if (optCode.isPresent()) {
+                    sendCodeMessage(chatId, optCode.get().getCode());
+                } else {
+                    sendText(chatId, messageManager.getRaw("telegram.no-active-code"));
+                }
+            });
         });
     }
     

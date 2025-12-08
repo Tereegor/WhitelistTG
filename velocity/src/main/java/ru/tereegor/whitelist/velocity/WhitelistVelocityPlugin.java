@@ -25,7 +25,7 @@ import java.nio.file.Path;
 @Plugin(
         id = "whitelisttg",
         name = "WhitelistTG",
-        version = "1.0.0",
+        version = "1.0.1",
         description = "Multi-server whitelist with Telegram integration",
         authors = {"Tereegor"}
 )
@@ -82,20 +82,6 @@ public class WhitelistVelocityPlugin {
         );
         
         logger.info("WhitelistTG Velocity plugin enabled!");
-        
-        storage.getAllServers().thenAccept(servers -> {
-            if (servers.isEmpty()) {
-                logger.info("No servers registered yet. Waiting for Bukkit plugins to register...");
-            } else {
-                logger.info("Found {} registered servers:", servers.size());
-                for (var server : servers) {
-                    logger.info("  - {} (whitelist: {}, online: {})", 
-                            server.getName(), 
-                            server.isWhitelistEnabled() ? "enabled" : "disabled",
-                            server.isOnline() ? "yes" : "no");
-                }
-            }
-        });
     }
     
     @Subscribe

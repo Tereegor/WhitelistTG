@@ -99,23 +99,6 @@ public class SqlStorage implements WhitelistStorage, TelegramStorage {
             """;
             stmt.execute(entriesTable);
             
-            String serversTable = isSqlite ? """
-                CREATE TABLE IF NOT EXISTS whitelist_servers (
-                    name TEXT PRIMARY KEY,
-                    display_name TEXT,
-                    whitelist_enabled INTEGER DEFAULT 1,
-                    last_heartbeat DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            """ : """
-                CREATE TABLE IF NOT EXISTS whitelist_servers (
-                    name VARCHAR(64) PRIMARY KEY,
-                    display_name VARCHAR(128),
-                    whitelist_enabled BOOLEAN DEFAULT TRUE,
-                    last_heartbeat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """;
-            stmt.execute(serversTable);
-            
             String codesTable = isSqlite ? """
                 CREATE TABLE IF NOT EXISTS registration_codes (
                     code TEXT PRIMARY KEY,
@@ -500,119 +483,6 @@ public class SqlStorage implements WhitelistStorage, TelegramStorage {
     }
     
     @Override
-    public CompletableFuture<Void> registerServer(ServerInfo server) {
-        return CompletableFuture.runAsync(() -> {
-            boolean isSqlite = config.getStorageType() == StorageType.SQLITE;
-            String sql = isSqlite ? """
-                INSERT INTO whitelist_servers (name, display_name, whitelist_enabled, last_heartbeat)
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT(name) DO UPDATE SET
-                display_name = excluded.display_name,
-                whitelist_enabled = excluded.whitelist_enabled,
-                last_heartbeat = excluded.last_heartbeat
-            """ : """
-                INSERT INTO whitelist_servers (name, display_name, whitelist_enabled, last_heartbeat)
-                VALUES (?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE 
-                display_name = VALUES(display_name),
-                whitelist_enabled = VALUES(whitelist_enabled),
-                last_heartbeat = VALUES(last_heartbeat)
-            """;
-            
-            try (Connection conn = dataSource.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(sql)) {
-                
-                ps.setString(1, server.getName());
-                ps.setString(2, server.getDisplayName());
-                ps.setBoolean(3, server.isWhitelistEnabled());
-                ps.setTimestamp(4, Timestamp.from(Instant.now()));
-                
-                ps.executeUpdate();
-            } catch (SQLException e) {
-                throw new RuntimeException("Failed to register server", e);
-            }
-        }, executor);
-    }
-    
-    @Override
-    public CompletableFuture<Void> updateServerHeartbeat(String serverName) {
-        return CompletableFuture.runAsync(() -> {
-            String sql = "UPDATE whitelist_servers SET last_heartbeat = ? WHERE name = ?";
-            
-            try (Connection conn = dataSource.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(sql)) {
-                
-                ps.setTimestamp(1, Timestamp.from(Instant.now()));
-                ps.setString(2, serverName);
-                
-                ps.executeUpdate();
-            } catch (SQLException e) {
-                throw new RuntimeException("Failed to update server heartbeat", e);
-            }
-        }, executor);
-    }
-    
-    @Override
-    public CompletableFuture<List<ServerInfo>> getAllServers() {
-        return CompletableFuture.supplyAsync(() -> {
-            String sql = "SELECT * FROM whitelist_servers";
-            
-            try (Connection conn = dataSource.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(sql);
-                 ResultSet rs = ps.executeQuery()) {
-                
-                List<ServerInfo> servers = new ArrayList<>();
-                while (rs.next()) {
-                    servers.add(mapServer(rs));
-                }
-                return servers;
-            } catch (SQLException e) {
-                throw new RuntimeException("Failed to get all servers", e);
-            }
-        }, executor);
-    }
-    
-    @Override
-    public CompletableFuture<Optional<ServerInfo>> getServer(String serverName) {
-        return CompletableFuture.supplyAsync(() -> {
-            String sql = "SELECT * FROM whitelist_servers WHERE name = ?";
-            
-            try (Connection conn = dataSource.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(sql)) {
-                
-                ps.setString(1, serverName);
-                
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        return Optional.of(mapServer(rs));
-                    }
-                }
-                return Optional.empty();
-            } catch (SQLException e) {
-                throw new RuntimeException("Failed to get server", e);
-            }
-        }, executor);
-    }
-    
-    @Override
-    public CompletableFuture<Void> updateServerWhitelistStatus(String serverName, boolean enabled) {
-        return CompletableFuture.runAsync(() -> {
-            String sql = "UPDATE whitelist_servers SET whitelist_enabled = ? WHERE name = ?";
-            
-            try (Connection conn = dataSource.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(sql)) {
-                
-                ps.setBoolean(1, enabled);
-                ps.setString(2, serverName);
-                
-                ps.executeUpdate();
-            } catch (SQLException e) {
-                throw new RuntimeException("Failed to update server whitelist status", e);
-            }
-        }, executor);
-    }
-    
-    @Override
     public CompletableFuture<Integer> getEntryCount(String serverName) {
         return CompletableFuture.supplyAsync(() -> {
             String sql = "SELECT COUNT(*) FROM whitelist_entries WHERE server_name = ? AND active = TRUE";
@@ -677,14 +547,6 @@ public class SqlStorage implements WhitelistStorage, TelegramStorage {
                 .build();
     }
     
-    private ServerInfo mapServer(ResultSet rs) throws SQLException {
-        return ServerInfo.builder()
-                .name(rs.getString("name"))
-                .displayName(rs.getString("display_name"))
-                .whitelistEnabled(rs.getBoolean("whitelist_enabled"))
-                .lastHeartbeat(rs.getTimestamp("last_heartbeat").toInstant())
-                .build();
-    }
     
     @Override
     public CompletableFuture<RegistrationCode> createCode(RegistrationCode code) {

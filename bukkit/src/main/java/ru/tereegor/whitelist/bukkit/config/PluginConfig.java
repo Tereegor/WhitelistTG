@@ -2,10 +2,7 @@ package ru.tereegor.whitelist.bukkit.config;
 
 import lombok.Getter;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import ru.tereegor.whitelist.bukkit.WhitelistPlugin;
-
-import java.io.File;
 
 @Getter
 public class PluginConfig {
@@ -35,8 +32,6 @@ public class PluginConfig {
         this.plugin = plugin;
         FileConfiguration config = plugin.getConfig();
         
-        YamlConfiguration secrets = loadSecrets();
-        
         this.serverName = config.getString("server-name", "MyServer");
         this.serverDisplayName = config.getString("server-display-name", "&6" + serverName);
         this.language = config.getString("language", "ru");
@@ -48,34 +43,19 @@ public class PluginConfig {
         this.codeExpirationMinutes = config.getInt("whitelist.code-expiration-minutes", 30);
         
         this.telegramEnabled = config.getBoolean("telegram.enabled", false);
-        this.telegramToken = secrets.getString("telegram.token", "");
-        this.telegramUsername = secrets.getString("telegram.username", "");
+        this.telegramToken = config.getString("telegram.token", "");
+        this.telegramUsername = config.getString("telegram.username", "");
         this.rules = config.getString("telegram.rules", "Правила сервера...");
         
-        this.dbUsername = secrets.getString("database.username", 
-                config.getString("database.username", "root"));
-        this.dbPassword = secrets.getString("database.password", 
-                config.getString("database.password", ""));
+        this.dbUsername = config.getString("database.username", "root");
+        this.dbPassword = config.getString("database.password", "");
         
         this.debug = config.getBoolean("debug", false);
         
         if (telegramEnabled && (telegramToken.isEmpty() || telegramToken.contains("1234567890"))) {
-            plugin.getLogger().warning("Telegram enabled but token not configured in secrets.yml!");
-            plugin.getLogger().warning("Copy secrets.yml.example to secrets.yml and fill in your bot token.");
+            plugin.getLogger().warning("Telegram enabled but token not configured in config.yml!");
+            plugin.getLogger().warning("Please set telegram.token and telegram.username in config.yml");
         }
-    }
-    
-    private YamlConfiguration loadSecrets() {
-        File secretsFile = new File(plugin.getDataFolder(), "secrets.yml");
-        
-        if (!secretsFile.exists()) {
-            plugin.saveResource("secrets.yml.example", false);
-            plugin.getLogger().warning("secrets.yml not found!");
-            plugin.getLogger().warning("Copy secrets.yml.example to secrets.yml and configure your tokens.");
-            return new YamlConfiguration();
-        }
-        
-        return YamlConfiguration.loadConfiguration(secretsFile);
     }
     
     public void setWhitelistEnabled(boolean enabled) {

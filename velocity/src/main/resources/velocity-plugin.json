@@ -1,0 +1,8 @@
+{
+  "id": "whitelisttg",
+  "name": "WhitelistTG",
+  "version": "1.0.1",
+  "description": "Multi-server whitelist with Telegram integration",
+  "authors": ["Tereegor"]
+}
+

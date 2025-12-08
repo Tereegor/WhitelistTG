@@ -102,10 +102,6 @@ public class WhitelistManager {
     }
     
     public CompletableFuture<RegistrationCode> generateCode(Long telegramId, String telegramUsername) {
-        return generateCode(telegramId, telegramUsername, null);
-    }
-    
-    public CompletableFuture<RegistrationCode> generateCode(Long telegramId, String telegramUsername, String playerName) {
         return storage.invalidateCodesForTelegramId(telegramId)
                 .thenCompose(v -> {
                     int expirationMinutes = plugin.getPluginConfig().getCodeExpirationMinutes();
@@ -114,7 +110,7 @@ public class WhitelistManager {
                             .code(CodeGenerator.generateFormatted())
                             .telegramId(telegramId)
                             .telegramUsername(telegramUsername)
-                            .playerName(playerName)
+                            .playerName(null)
                             .createdAt(Instant.now())
                             .expiresAt(Instant.now().plus(expirationMinutes, ChronoUnit.MINUTES))
                             .used(false)

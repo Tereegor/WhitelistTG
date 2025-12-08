@@ -1,6 +1,5 @@
 package ru.tereegor.whitelist.common.storage;
 
-import ru.tereegor.whitelist.common.model.ServerInfo;
 import ru.tereegor.whitelist.common.model.WhitelistEntry;
 
 import java.util.List;
@@ -35,16 +34,6 @@ public interface WhitelistStorage {
     CompletableFuture<Boolean> updateEntry(WhitelistEntry entry);
     
     CompletableFuture<List<String>> getPlayerServers(UUID playerUuid);
-    
-    CompletableFuture<Void> registerServer(ServerInfo server);
-    
-    CompletableFuture<Void> updateServerHeartbeat(String serverName);
-    
-    CompletableFuture<List<ServerInfo>> getAllServers();
-    
-    CompletableFuture<Optional<ServerInfo>> getServer(String serverName);
-    
-    CompletableFuture<Void> updateServerWhitelistStatus(String serverName, boolean enabled);
     
     CompletableFuture<Integer> getEntryCount(String serverName);
     

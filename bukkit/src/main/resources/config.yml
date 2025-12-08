@@ -34,6 +34,12 @@ telegram:
   # Enable Telegram bot integration
   enabled: true
   
+  # Telegram bot token
+  token: "1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
+  
+  # Telegram bot username (without @)
+  username: "your_whitelist_bot"
+  
   # Server rules (shown when user sends /start)
   rules: |
     <b>ПРАВИЛА СЕРВЕРА</b>
@@ -57,9 +63,6 @@ database:
     connection-timeout: 30000
     idle-timeout: 600000
     max-lifetime: 1800000
-
-# Heartbeat interval in seconds (for Velocity sync)
-heartbeat-interval: 30
 
 # Debug mode
 debug: false

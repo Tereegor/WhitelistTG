@@ -302,15 +302,11 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
     
     private void handleEnable(CommandSender sender) {
         plugin.getPluginConfig().setWhitelistEnabled(true);
-        plugin.getStorage().updateServerWhitelistStatus(
-                plugin.getPluginConfig().getServerName(), true);
         msg.send(sender, "enabled");
     }
     
     private void handleDisable(CommandSender sender) {
         plugin.getPluginConfig().setWhitelistEnabled(false);
-        plugin.getStorage().updateServerWhitelistStatus(
-                plugin.getPluginConfig().getServerName(), false);
         msg.send(sender, "disabled");
     }
     

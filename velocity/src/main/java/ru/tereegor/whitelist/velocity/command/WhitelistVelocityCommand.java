@@ -38,7 +38,6 @@ public class WhitelistVelocityCommand implements SimpleCommand {
         String subCommand = args[0].toLowerCase();
         
         switch (subCommand) {
-            case "servers" -> handleServers(source);
             case "check" -> handleCheck(source, args);
             case "reload" -> handleReload(source);
             case "cache" -> handleCache(source, args);
@@ -47,32 +46,13 @@ public class WhitelistVelocityCommand implements SimpleCommand {
         }
     }
     
-    private void handleServers(com.velocitypowered.api.command.CommandSource source) {
-        plugin.getStorage().getAllServers().thenAccept(servers -> {
-            if (servers.isEmpty()) {
-                source.sendMessage(Component.text("Нет зарегистрированных серверов.", NamedTextColor.YELLOW));
-                return;
-            }
-            
-            source.sendMessage(serializer.deserialize("&6=== Зарегистрированные серверы ==="));
-            for (var server : servers) {
-                String status = server.isOnline() ? "&a●" : "&c●";
-                String whitelist = server.isWhitelistEnabled() ? "&aВкл" : "&cВыкл";
-                source.sendMessage(serializer.deserialize(String.format(
-                        "%s &e%s &8| &7Вайтлист: %s", 
-                        status, server.getName(), whitelist)));
-            }
-        });
-    }
-    
     private void handleCheck(com.velocitypowered.api.command.CommandSource source, String[] args) {
         if (args.length < 2) {
-            source.sendMessage(Component.text("Использование: /wlv check <игрок> [сервер]", NamedTextColor.RED));
+            source.sendMessage(Component.text("Использование: /wlv check <игрок>", NamedTextColor.RED));
             return;
         }
         
         String playerName = args[1];
-        String serverName = args.length > 2 ? args[2] : null;
         
         var optPlayer = plugin.getProxy().getPlayer(playerName);
         if (optPlayer.isEmpty()) {
@@ -82,27 +62,18 @@ public class WhitelistVelocityCommand implements SimpleCommand {
         
         Player player = optPlayer.get();
         
-        if (serverName != null) {
-            plugin.getCache().isWhitelisted(player.getUniqueId(), serverName).thenAccept(whitelisted -> {
-                String msg = whitelisted ? 
-                        "&aИгрок &e%s &aв вайтлисте сервера &6%s" :
-                        "&cИгрок &e%s &cНЕ в вайтлисте сервера &6%s";
-                source.sendMessage(serializer.deserialize(String.format(msg, playerName, serverName)));
-            });
-        } else {
-            plugin.getStorage().getPlayerServers(player.getUniqueId()).thenAccept(servers -> {
-                if (servers.isEmpty()) {
-                    source.sendMessage(serializer.deserialize(
-                            "&cИгрок &e" + playerName + " &cне в вайтлисте ни одного сервера."));
-                } else {
-                    source.sendMessage(serializer.deserialize(
-                            "&6Игрок &e" + playerName + " &6в вайтлисте серверов:"));
-                    for (String server : servers) {
-                        source.sendMessage(serializer.deserialize("&7- &e" + server));
-                    }
+        plugin.getStorage().getPlayerServers(player.getUniqueId()).thenAccept(servers -> {
+            if (servers.isEmpty()) {
+                source.sendMessage(serializer.deserialize(
+                        "&cИгрок &e" + playerName + " &cне в вайтлисте ни одного сервера."));
+            } else {
+                source.sendMessage(serializer.deserialize(
+                        "&6Игрок &e" + playerName + " &6в вайтлисте серверов:"));
+                for (String server : servers) {
+                    source.sendMessage(serializer.deserialize("&7- &e" + server));
                 }
-            });
-        }
+            }
+        });
     }
     
     private void handleReload(com.velocitypowered.api.command.CommandSource source) {
@@ -150,8 +121,7 @@ public class WhitelistVelocityCommand implements SimpleCommand {
     
     private void sendHelp(com.velocitypowered.api.command.CommandSource source) {
         source.sendMessage(serializer.deserialize("&6=== WhitelistTG Velocity ==="));
-        source.sendMessage(serializer.deserialize("&e/wlv servers &7- Список серверов"));
-        source.sendMessage(serializer.deserialize("&e/wlv check <игрок> [сервер] &7- Проверить игрока"));
+        source.sendMessage(serializer.deserialize("&e/wlv check <игрок> &7- Проверить игрока"));
         source.sendMessage(serializer.deserialize("&e/wlv cache <clear|player|server> &7- Управление кэшем"));
         source.sendMessage(serializer.deserialize("&e/wlv reload &7- Перезагрузить конфиг"));
     }
@@ -163,7 +133,7 @@ public class WhitelistVelocityCommand implements SimpleCommand {
         if (args.length <= 1) {
             String prefix = args.length == 0 ? "" : args[0].toLowerCase();
             return CompletableFuture.completedFuture(
-                    List.of("servers", "check", "cache", "reload", "help").stream()
+                    List.of("check", "cache", "reload", "help").stream()
                             .filter(s -> s.startsWith(prefix))
                             .collect(Collectors.toList())
             );
@@ -189,15 +159,6 @@ public class WhitelistVelocityCommand implements SimpleCommand {
                                 .collect(Collectors.toList())
                 );
             }
-        }
-        
-        if (args.length == 3 && args[0].equalsIgnoreCase("check")) {
-            return plugin.getStorage().getAllServers().thenApply(servers ->
-                    servers.stream()
-                            .map(s -> s.getName())
-                            .filter(s -> s.toLowerCase().startsWith(args[2].toLowerCase()))
-                            .collect(Collectors.toList())
-            );
         }
         
         return CompletableFuture.completedFuture(List.of());

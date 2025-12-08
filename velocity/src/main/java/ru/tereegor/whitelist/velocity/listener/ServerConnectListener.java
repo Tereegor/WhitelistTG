@@ -34,24 +34,6 @@ public class ServerConnectListener {
             return;
         }
         
-        var serverInfo = plugin.getCache().getServer(serverName).join();
-        
-        if (serverInfo.isEmpty()) {
-            if (plugin.getConfig().isDebug()) {
-                plugin.getLogger().info("Server {} not registered, allowing connection for {}", 
-                        serverName, player.getUsername());
-            }
-            return;
-        }
-        
-        if (!serverInfo.get().isWhitelistEnabled()) {
-            if (plugin.getConfig().isDebug()) {
-                plugin.getLogger().info("Whitelist disabled on {}, allowing connection for {}", 
-                        serverName, player.getUsername());
-            }
-            return;
-        }
-        
         boolean isWhitelisted = plugin.getCache()
                 .isWhitelisted(player.getUniqueId(), serverName)
                 .join();

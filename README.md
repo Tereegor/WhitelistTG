@@ -1,6 +1,6 @@
 # WhitelistTG
 
-**Версия:** 1.0.0  
+**Версия:** 1.0.1  
 **Платформы:** Bukkit 1.21+, Velocity 3.3+  
 **Java:** 17+  
 **Автор:** Tereegor
@@ -91,17 +91,17 @@ mvn clean package -DskipTests
 ```
 
 После сборки JAR-файлы располагаются в следующих директориях:
-- `bukkit/target/whitelist-bukkit-1.0.0.jar`
-- `velocity/target/whitelist-velocity-1.0.0.jar`
+- `bukkit/target/whitelist-bukkit-1.0.1.jar`
+- `velocity/target/whitelist-velocity-1.0.1.jar`
 
 ### Размещение файлов
 
 | Файл | Назначение |
 |------|------------|
-| `whitelist-bukkit-1.0.0.jar` | Директория `plugins/` серверов Paper/Spigot |
-| `whitelist-velocity-1.0.0.jar` | Директория `plugins/` прокси Velocity |
+| `whitelist-bukkit-1.0.1.jar` | Директория `plugins/` серверов Paper/Spigot |
+| `whitelist-velocity-1.0.1.jar` | Директория `plugins/` прокси Velocity |
 
-> **Важно:** Файл `whitelist-common-1.0.0.jar` размещать не требуется — он автоматически включён в состав bukkit и velocity модулей.
+> **Важно:** Файл `whitelist-common-1.0.1.jar` размещать не требуется — он автоматически включён в состав bukkit и velocity модулей.
 
 ---
 
@@ -109,7 +109,10 @@ mvn clean package -DskipTests
 
 ### Bukkit-модуль
 
-При первом запуске плагин создаёт файл `secrets.yml.example` с шаблоном конфигурации. Необходимо убрать `.example` и поменять данные на нужные.
+При первом запуске плагин создаёт файл `config.yml` с шаблоном конфигурации. Необходимо заполнить:
+- `telegram.token` — токен Telegram бота (получить у @BotFather)
+- `telegram.username` — username бота (без @)
+- `database.username` и `database.password` — если используется MySQL/MariaDB
 
 ---
 
@@ -142,8 +145,7 @@ mvn clean package -DskipTests
 
 | Команда | Описание |
 |---------|----------|
-| `/wlv servers` | Список зарегистрированных серверов |
-| `/wlv check <игрок> [сервер]` | Проверка статуса игрока |
+| `/wlv check <игрок>` | Проверка статуса игрока |
 | `/wlv cache clear` | Очистка кэша |
 | `/wlv cache player <игрок>` | Очистка кэша игрока |
 | `/wlv cache server <сервер>` | Очистка кэша сервера |
@@ -168,7 +170,8 @@ mvn clean package -DskipTests
 1. Откройте [@BotFather](https://t.me/BotFather) в Telegram
 2. Отправьте команду `/newbot`
 3. Следуйте инструкциям для создания бота
-4. Скопируйте полученный токен в файл `secrets.yml`
+4. Скопируйте полученный токен в файл `config.yml` в секцию `telegram.token`
+5. Укажите username бота в `telegram.username` (без символа @)
 
 
 ### Процесс регистрации игрока
@@ -187,7 +190,7 @@ mvn clean package -DskipTests
 ├─────────────────────────────────────────────────────────────┤
 │  6. Игрок вводит команду /code ABC-123                      │
 ├─────────────────────────────────────────────────────────────┤
-│  7. Аккаунт Telegram привязывается к игровому аккаунту      │
+│  7. Система определяет ник игрока и привязывает Telegram    │
 ├─────────────────────────────────────────────────────────────┤
 │  8. Игрок получает доступ к серверам сети                   │
 └─────────────────────────────────────────────────────────────┘
@@ -246,7 +249,7 @@ mvn clean package -DskipTests
 
 **Настройка:**
 1. Создайте базу данных: `CREATE DATABASE whitelist CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
-2. Укажите параметры подключения в `config.yml` и `secrets.yml`
+2. Укажите параметры подключения в `config.yml` (секция `database`)
 3. Убедитесь, что параметры идентичны на всех серверах сети
 
 ---

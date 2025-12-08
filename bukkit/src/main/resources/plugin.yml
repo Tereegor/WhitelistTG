@@ -3,7 +3,7 @@ version: ${project.version}
 main: ru.tereegor.whitelist.bukkit.WhitelistPlugin
 authors: [Math_Tereegor]
 description: Multi-server whitelist with Telegram integration
-website: https://github.com/Tereegor/whitelist-with-tg
+website: https://github.com/Tereegor/whitelisttg
 
 api-version: '1.21'
 api: '1.21'
