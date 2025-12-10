@@ -39,16 +39,14 @@ public class ServerConnectListener {
                 .join();
         
         if (!isWhitelisted) {
-            event.setResult(ServerPreConnectEvent.ServerResult.denied());
-            
             String kickMessage = plugin.getConfig().getKickMessage()
                     .replace("%player%", player.getUsername())
                     .replace("%server%", serverName);
-            
-            player.sendMessage(serializer.deserialize(kickMessage));
-            
+
+            player.disconnect(serializer.deserialize(kickMessage));
+
             if (plugin.getConfig().isDebug()) {
-                plugin.getLogger().info("Denied {} connection to {} - not whitelisted", 
+                plugin.getLogger().info("Denied {} connection to {} - not whitelisted",
                         player.getUsername(), serverName);
             }
         } else {

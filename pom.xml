@@ -6,7 +6,7 @@
 
     <groupId>ru.tereegor</groupId>
     <artifactId>whitelist-parent</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <packaging>pom</packaging>
     <name>WhitelistTG</name>
     <description>Multi-server whitelist system with Telegram integration</description>
@@ -22,8 +22,6 @@
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        
-        <!-- Dependency versions -->
         <hikaricp.version>5.1.0</hikaricp.version>
         <h2.version>2.2.224</h2.version>
         <sqlite.version>3.44.1.0</sqlite.version>
@@ -36,7 +34,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- Database -->
             <dependency>
                 <groupId>com.zaxxer</groupId>
                 <artifactId>HikariCP</artifactId>
@@ -62,8 +59,6 @@
                 <artifactId>mariadb-java-client</artifactId>
                 <version>${mariadb.version}</version>
             </dependency>
-            
-            <!-- Utilities -->
             <dependency>
                 <groupId>com.google.code.gson</groupId>
                 <artifactId>gson</artifactId>

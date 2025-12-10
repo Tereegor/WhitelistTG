@@ -7,6 +7,7 @@ import ru.tereegor.whitelist.bukkit.command.InviteCommand;
 import ru.tereegor.whitelist.bukkit.command.WhitelistCommand;
 import ru.tereegor.whitelist.bukkit.config.PluginConfig;
 import ru.tereegor.whitelist.bukkit.listener.PlayerJoinListener;
+import ru.tereegor.whitelist.bukkit.listener.PlayerLoginListener;
 import ru.tereegor.whitelist.bukkit.manager.MessageManager;
 import ru.tereegor.whitelist.bukkit.manager.WhitelistManager;
 import ru.tereegor.whitelist.bukkit.telegram.TelegramBot;
@@ -50,6 +51,7 @@ public class WhitelistPlugin extends JavaPlugin {
             getLogger().info("Commands registered");
             
             getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
+            getServer().getPluginManager().registerEvents(new PlayerLoginListener(this), this);
             getLogger().info("Listeners registered");
             
             if (pluginConfig.isTelegramEnabled()) {

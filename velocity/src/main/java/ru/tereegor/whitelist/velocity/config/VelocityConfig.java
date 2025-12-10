@@ -42,16 +42,9 @@ public class VelocityConfig {
         
         try (InputStream in = Files.newInputStream(configPath)) {
             Yaml yaml = new Yaml();
-            Object loaded = yaml.load(in);
-            if (loaded instanceof Map) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> typedConfig = (Map<String, Object>) loaded;
-                config = typedConfig;
-            } else {
-                config = Map.of();
-            }
+            config = yaml.load(in);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to load config.yml", e);
+            config = Map.of();
         }
         
         this.language = getString(config, "language", "ru");

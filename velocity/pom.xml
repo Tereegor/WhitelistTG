@@ -7,7 +7,7 @@
     <parent>
         <groupId>ru.tereegor</groupId>
         <artifactId>whitelist-parent</artifactId>
-        <version>1.0.1</version>
+        <version>1.0.2</version>
     </parent>
 
     <artifactId>whitelist-velocity</artifactId>
@@ -22,28 +22,21 @@
     </repositories>
 
     <dependencies>
-        <!-- Common module -->
         <dependency>
             <groupId>ru.tereegor</groupId>
             <artifactId>whitelist-common</artifactId>
             <version>${project.version}</version>
         </dependency>
-        
-        <!-- Velocity API -->
         <dependency>
             <groupId>com.velocitypowered</groupId>
             <artifactId>velocity-api</artifactId>
             <version>3.4.0-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
-        
-        <!-- Utilities -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
         </dependency>
-        
-        <!-- YAML parsing -->
         <dependency>
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>

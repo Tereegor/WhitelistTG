@@ -7,7 +7,7 @@
     <parent>
         <groupId>ru.tereegor</groupId>
         <artifactId>whitelist-parent</artifactId>
-        <version>1.0.1</version>
+        <version>1.0.2</version>
     </parent>
 
     <artifactId>whitelist-bukkit</artifactId>
@@ -26,29 +26,22 @@
     </repositories>
 
     <dependencies>
-        <!-- Common module -->
         <dependency>
             <groupId>ru.tereegor</groupId>
             <artifactId>whitelist-common</artifactId>
             <version>${project.version}</version>
         </dependency>
-        
-        <!-- Paper API -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
             <version>1.21.4-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
-        
-        <!-- Telegram Bot API -->
         <dependency>
             <groupId>org.telegram</groupId>
             <artifactId>telegrambots</artifactId>
             <version>6.9.7.1</version>
         </dependency>
-        
-        <!-- Utilities -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
