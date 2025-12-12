@@ -1,6 +1,6 @@
 # WhitelistTG
 
-**Версия:** 1.0.2  
+**Версия:** 1.0.3  
 **Платформы:** Bukkit 1.21+, Velocity 3.3+  
 **Java:** 17+  
 **Автор:** Tereegor
@@ -91,17 +91,17 @@ mvn clean package -DskipTests
 ```
 
 После сборки JAR-файлы располагаются в следующих директориях:
-- `bukkit/target/whitelist-bukkit-1.0.2.jar`
-- `velocity/target/whitelist-velocity-1.0.2.jar`
+- `bukkit/target/whitelist-bukkit-1.0.3.jar`
+- `velocity/target/whitelist-velocity-1.0.3.jar`
 
 ### Размещение файлов
 
 | Файл | Назначение |
 |------|------------|
-| `whitelist-bukkit-1.0.2.jar` | Директория `plugins/` серверов Paper/Spigot |
-| `whitelist-velocity-1.0.2.jar` | Директория `plugins/` прокси Velocity |
+| `whitelist-bukkit-1.0.3.jar` | Директория `plugins/` серверов Paper/Spigot |
+| `whitelist-velocity-1.0.3.jar` | Директория `plugins/` прокси Velocity |
 
-> **Важно:** Файл `whitelist-common-1.0.2.jar` размещать не требуется — он автоматически включён в состав bukkit и velocity модулей.
+> **Важно:** Файл `whitelist-common-1.0.3.jar` размещать не требуется — он автоматически включён в состав bukkit и velocity модулей.
 
 ---
 

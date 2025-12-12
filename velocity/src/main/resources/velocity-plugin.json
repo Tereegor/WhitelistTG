@@ -1,0 +1,11 @@
+{
+  "id": "whitelisttg",
+  "name": "WhitelistTG",
+  "version": "1.0.2",
+  "description": "Multi-server whitelist with Telegram integration",
+  "authors": [
+    "Math_Tereegor"
+  ],
+  "main": "ru.tereegor.whitelist.velocity.WhitelistVelocityPlugin"
+}
+

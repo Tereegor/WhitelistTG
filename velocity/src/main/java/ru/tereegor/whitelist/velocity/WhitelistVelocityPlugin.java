@@ -27,7 +27,7 @@ import java.nio.file.Path;
         name = "WhitelistTG",
         version = "1.0.2",
         description = "Multi-server whitelist with Telegram integration",
-        authors = {"Tereegor"}
+        authors = {"Math_Tereegor"}
 )
 @Getter
 public class WhitelistVelocityPlugin {

@@ -53,6 +53,13 @@ public class PlayerJoinListener implements Listener {
             }
         } catch (Exception e) {
             plugin.getLogger().severe("Error checking whitelist for " + player.getName() + ": " + e.getMessage());
+            e.printStackTrace();
+            String kickMessage = plugin.getPluginConfig().getKickMessage();
+            MessageManager msg = plugin.getMessageManager();
+            Component message = msg.processAndDeserialize(kickMessage,
+                    Placeholder.parsed("player", player.getName()),
+                    Placeholder.parsed("server", plugin.getPluginConfig().getServerName()));
+            event.disallow(PlayerLoginEvent.Result.KICK_WHITELIST, message);
         }
     }
     

@@ -35,9 +35,15 @@ public class WhitelistCache {
         }
         
         return storage.isWhitelisted(playerUuid, serverName).thenApply(result -> {
-            if (whitelistCache.size() < maxSize) {
-                whitelistCache.put(key, new CacheEntry<>(result, System.currentTimeMillis() + ttlMillis));
+            if (whitelistCache.size() >= maxSize) {
+                whitelistCache.entrySet().removeIf(e -> e.getValue().isExpired());
+                
+                if (whitelistCache.size() >= maxSize) {
+                    String oldestKey = whitelistCache.keySet().iterator().next();
+                    whitelistCache.remove(oldestKey);
+                }
             }
+            whitelistCache.put(key, new CacheEntry<>(result, System.currentTimeMillis() + ttlMillis));
             return result;
         });
     }

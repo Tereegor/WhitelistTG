@@ -59,6 +59,7 @@ code:
   usage: "<error>Использование: <info>/code <код>"
   invalid: "<error>Неверный или истекший код!"
   already-whitelisted: "<warning>⚠ Вы уже в вайтлисте этого сервера!"
+  telegram-already-linked: "<error>❌ Этот Telegram аккаунт уже привязан к другому Minecraft аккаунту!"
   success: "<success>Вы успешно активировали код!"
   success-details: "<text-secondary>Добро пожаловать на <primary><server>!"
   linked: "<success>Ваш аккаунт привязан к Telegram!"

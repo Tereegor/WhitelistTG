@@ -6,10 +6,15 @@ import com.velocitypowered.api.proxy.Player;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import ru.tereegor.whitelist.velocity.WhitelistVelocityPlugin;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 public class ServerConnectListener {
     
     private final WhitelistVelocityPlugin plugin;
     private final LegacyComponentSerializer serializer = LegacyComponentSerializer.legacyAmpersand();
+    private static final long WHITELIST_CHECK_TIMEOUT_SECONDS = 5;
     
     public ServerConnectListener(WhitelistVelocityPlugin plugin) {
         this.plugin = plugin;
@@ -34,9 +39,20 @@ public class ServerConnectListener {
             return;
         }
         
-        boolean isWhitelisted = plugin.getCache()
-                .isWhitelisted(player.getUniqueId(), serverName)
-                .join();
+        boolean isWhitelisted;
+        try {
+            CompletableFuture<Boolean> future = plugin.getCache()
+                    .isWhitelisted(player.getUniqueId(), serverName);
+            
+            isWhitelisted = future.get(WHITELIST_CHECK_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            plugin.getLogger().error("Whitelist check timeout for " + player.getUsername() + " after " + 
+                    WHITELIST_CHECK_TIMEOUT_SECONDS + " seconds");
+            isWhitelisted = false;
+        } catch (Exception e) {
+            plugin.getLogger().error("Error checking whitelist for " + player.getUsername(), e);
+            isWhitelisted = false;
+        }
         
         if (!isWhitelisted) {
             String kickMessage = plugin.getConfig().getKickMessage()
