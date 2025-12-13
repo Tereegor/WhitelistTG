@@ -49,11 +49,16 @@ public class WhitelistManager {
 
     public CompletableFuture<WhitelistEntry> addPlayer(UUID playerUuid, String playerName,
             RegistrationType type, String reason, String addedBy) {
+        return addPlayerToServer(playerUuid, playerName, getServerName(), type, reason, addedBy);
+    }
+    
+    public CompletableFuture<WhitelistEntry> addPlayerToServer(UUID playerUuid, String playerName,
+            String serverName, RegistrationType type, String reason, String addedBy) {
 
         WhitelistEntry entry = WhitelistEntry.builder()
                 .playerUuid(playerUuid)
                 .playerName(playerName)
-                .serverName(getServerName())
+                .serverName(serverName)
                 .registrationType(type)
                 .reason(reason)
                 .addedBy(addedBy)
@@ -62,6 +67,26 @@ public class WhitelistManager {
                 .build();
 
         return storage.addEntry(entry);
+    }
+    
+    public CompletableFuture<WhitelistEntry> addPlayerToServers(UUID playerUuid, String playerName,
+            List<String> servers, RegistrationType type, String reason, String addedBy) {
+        
+        if (servers.isEmpty()) {
+            return addPlayer(playerUuid, playerName, type, reason, addedBy);
+        }
+        
+        CompletableFuture<WhitelistEntry> result = CompletableFuture.completedFuture(null);
+        WhitelistEntry[] lastEntry = new WhitelistEntry[1];
+        
+        for (String server : servers) {
+            result = result.thenCompose(entry -> {
+                if (entry != null) lastEntry[0] = entry;
+                return addPlayerToServer(playerUuid, playerName, server, type, reason, addedBy);
+            });
+        }
+        
+        return result.thenApply(entry -> entry != null ? entry : lastEntry[0]);
     }
 
     public CompletableFuture<WhitelistEntry> addPlayerWithInvite(UUID playerUuid, String playerName,
@@ -126,15 +151,34 @@ public class WhitelistManager {
     }
 
     public CompletableFuture<ActivationResult> activateCode(String code, UUID playerUuid, String playerName) {
+        if (plugin.getPluginConfig().isDebug()) {
+            plugin.getLogger().info("[DEBUG] Activating code: '" + code + "' for player: " + playerName);
+            plugin.getLogger().info("[DEBUG] Database path: " + plugin.getDataFolder().getAbsolutePath());
+        }
+        
         return storage.getCode(code).thenCompose(optCode -> {
             if (optCode.isEmpty()) {
+                if (plugin.getPluginConfig().isDebug()) {
+                    plugin.getLogger().info("[DEBUG] Code NOT FOUND in database: '" + code + "'");
+                }
                 return CompletableFuture.completedFuture(
                         new ActivationResult(false, "code.invalid", null));
             }
 
             RegistrationCode regCode = optCode.get();
+            
+            if (plugin.getPluginConfig().isDebug()) {
+                plugin.getLogger().info("[DEBUG] Found code: " + regCode.getCode() + 
+                        ", used=" + regCode.isUsed() + 
+                        ", expired=" + regCode.isExpired() +
+                        ", expiresAt=" + regCode.getExpiresAt() +
+                        ", telegramId=" + regCode.getTelegramId());
+            }
 
             if (!regCode.isValid()) {
+                if (plugin.getPluginConfig().isDebug()) {
+                    plugin.getLogger().info("[DEBUG] Code is invalid (used or expired)");
+                }
                 return CompletableFuture.completedFuture(
                         new ActivationResult(false, "code.invalid", null));
             }
@@ -171,8 +215,9 @@ public class WhitelistManager {
                                     (regCode.getTelegramUsername() != null ? regCode.getTelegramUsername()
                                             : regCode.getTelegramId());
 
-                            return addPlayer(playerUuid, playerName, RegistrationType.TELEGRAM_CODE,
-                                    reason, "Telegram")
+                            List<String> serversToAdd = plugin.getPluginConfig().getServersToAddOnActivation();
+                            return addPlayerToServers(playerUuid, playerName, serversToAdd,
+                                    RegistrationType.TELEGRAM_CODE, reason, "Telegram")
                                     .thenApply(entry -> new ActivationResult(true, "code.success", entry));
                         });
                     });

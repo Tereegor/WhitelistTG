@@ -17,6 +17,7 @@ public class VelocityConfig {
     private final String kickMessage;
     private final String whitelistDisabledMessage;
     private final List<String> bypassServers;
+    private final List<String> whitelistServers;
     
     private final String storageType;
     private final String databaseHost;
@@ -56,8 +57,9 @@ public class VelocityConfig {
                 "&aВайтлист отключен");
         
         this.bypassServers = getList(config, "bypass-servers", List.of("lobby", "hub"));
+        this.whitelistServers = getList(config, "whitelist-servers", List.of());
         
-        this.storageType = getString(config, "storage", "H2");
+        this.storageType = getString(config, "storage", "SQLITE");
         
         Map<String, Object> database = getMap(config, "database");
         this.databaseHost = getString(database, "host", "localhost");
@@ -82,6 +84,17 @@ public class VelocityConfig {
     
     public boolean isBypassServer(String serverName) {
         return bypassServers.stream()
+                .anyMatch(s -> s.equalsIgnoreCase(serverName));
+    }
+    
+    public boolean requiresWhitelist(String serverName) {
+        if (isBypassServer(serverName)) {
+            return false;
+        }
+        if (whitelistServers.isEmpty()) {
+            return true;
+        }
+        return whitelistServers.stream()
                 .anyMatch(s -> s.equalsIgnoreCase(serverName));
     }
     

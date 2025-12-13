@@ -28,6 +28,9 @@ public class WhitelistPlugin extends JavaPlugin {
     private WhitelistManager whitelistManager;
     private TelegramBot telegramBot;
     
+    private final Object botLock = new Object();
+    private volatile boolean botReloadInProgress = false;
+    
     @Override
     public void onEnable() {
         try {
@@ -130,16 +133,20 @@ public class WhitelistPlugin extends JavaPlugin {
     }
     
     private void startTelegramBot() {
-        try {
-            this.telegramBot = new TelegramBot(this);
-            telegramBot.start();
-            getLogger().info("Telegram bot started successfully!");
-        } catch (Exception e) {
-            getLogger().severe("Failed to start Telegram bot: " + e.getMessage());
-            if (pluginConfig.isDebug()) {
-                e.printStackTrace();
+        getServer().getScheduler().runTaskAsynchronously(this, () -> {
+            synchronized (botLock) {
+                try {
+                    this.telegramBot = new TelegramBot(this);
+                    telegramBot.start();
+                    getLogger().info("Telegram bot started successfully!");
+                } catch (Exception e) {
+                    getLogger().severe("Failed to start Telegram bot: " + e.getMessage());
+                    if (pluginConfig.isDebug()) {
+                        e.printStackTrace();
+                    }
+                }
             }
-        }
+        });
     }
     
     public void reload() {
@@ -147,17 +154,38 @@ public class WhitelistPlugin extends JavaPlugin {
         this.pluginConfig = new PluginConfig(this);
         this.messageManager = new MessageManager(this, pluginConfig.getLanguage());
         
-        if (telegramBot != null) {
-            telegramBot.stop();
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+        getServer().getScheduler().runTaskAsynchronously(this, () -> {
+            synchronized (botLock) {
+                if (botReloadInProgress) {
+                    getLogger().warning("Bot reload already in progress, skipping...");
+                    return;
+                }
+                botReloadInProgress = true;
+                
+                try {
+                    if (telegramBot != null) {
+                        telegramBot.stop();
+                        telegramBot = null;
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                    if (pluginConfig.isTelegramEnabled()) {
+                        this.telegramBot = new TelegramBot(this);
+                        telegramBot.start();
+                        getLogger().info("Telegram bot restarted successfully!");
+                    }
+                } catch (Exception e) {
+                    getLogger().severe("Failed to restart Telegram bot: " + e.getMessage());
+                } finally {
+                    botReloadInProgress = false;
+                }
             }
-        }
-        if (pluginConfig.isTelegramEnabled()) {
-            startTelegramBot();
-        }
+        });
+        
+        getLogger().info("Configuration reloaded!");
     }
 }
 

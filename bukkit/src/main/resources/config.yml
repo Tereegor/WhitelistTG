@@ -28,6 +28,11 @@ whitelist:
   
   # Code expiration time in minutes (default: 30)
   code-expiration-minutes: 30
+  
+  # Servers to add player to when code is activated via Telegram
+  # If empty, player will be added only to this server (server-name)
+  # You can specify multiple servers
+  add-to-servers: [duckhood]
 
 # Telegram bot settings
 telegram:

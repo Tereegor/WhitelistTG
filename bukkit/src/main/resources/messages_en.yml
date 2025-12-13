@@ -53,6 +53,10 @@ info-added-by: "<text-secondary>Added by: <info><added_by>"
 info-date: "<text-secondary>Date added: <info><date>"
 info-no-entries: "<error>✗ Player has no entries in whitelist."
 
+# Kick messages
+kick:
+  not-whitelisted: "<red>You don't have access to server <gold><server><red>!\n<gray>Get a pass through the Telegram bot."
+
 # Code activation
 code:
   usage: "<error>✗ Usage: <info>/code <code>"
@@ -93,6 +97,6 @@ telegram:
   accept-button: "I accept the rules"
   already-linked: "Your account is already linked to player: <player>"
   code-generation-error: "Code generation error. Please try again later."
-  code-message: "Your registration code:\n\n<code><code></code>\n\nJoin the server and enter the command:\n<code>/code <code></code>\n\nCode is valid for <minutes> minutes."
+  code-message: "Your registration code:\n\n<code>\n\nJoin the server and enter the command:\n/code <code>\n\nCode is valid for <minutes> minutes."
   no-active-code: "You don't have an active code. Press /start to get a new code."
   help-message: "Available commands:\n\n/start - Start registration\n/code - Show current code\n/help - Show this help\n\nServer: <server>"

@@ -22,54 +22,71 @@ public class ServerConnectListener {
     
     @Subscribe
     public void onServerPreConnect(ServerPreConnectEvent event) {
-        Player player = event.getPlayer();
-        
-        var targetServer = event.getOriginalServer();
-        if (targetServer == null) {
-            return;
-        }
-        
-        String serverName = targetServer.getServerInfo().getName();
-        
-        if (plugin.getConfig().isBypassServer(serverName)) {
-            return;
-        }
-        
-        if (player.hasPermission("whitelist.bypass")) {
-            return;
-        }
-        
-        boolean isWhitelisted;
         try {
-            CompletableFuture<Boolean> future = plugin.getCache()
-                    .isWhitelisted(player.getUniqueId(), serverName);
+            Player player = event.getPlayer();
             
-            isWhitelisted = future.get(WHITELIST_CHECK_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-        } catch (TimeoutException e) {
-            plugin.getLogger().error("Whitelist check timeout for " + player.getUsername() + " after " + 
-                    WHITELIST_CHECK_TIMEOUT_SECONDS + " seconds");
-            isWhitelisted = false;
+            var targetServer = event.getOriginalServer();
+            if (targetServer == null) {
+                return;
+            }
+            
+            String serverName = targetServer.getServerInfo().getName();
+            
+            if (!plugin.getConfig().requiresWhitelist(serverName)) {
+                if (plugin.getConfig().isDebug()) {
+                    plugin.getLogger().info("Bypassing whitelist check for {} on server {}",
+                            player.getUsername(), serverName);
+                }
+                return;
+            }
+            
+            if (player.hasPermission("whitelist.bypass")) {
+                if (plugin.getConfig().isDebug()) {
+                    plugin.getLogger().info("Bypassing whitelist check for {} - has permission",
+                            player.getUsername());
+                }
+                return;
+            }
+            
+            boolean isWhitelisted;
+            try {
+                CompletableFuture<Boolean> future = plugin.getCache()
+                        .isWhitelisted(player.getUniqueId(), serverName);
+                
+                isWhitelisted = future.get(WHITELIST_CHECK_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            } catch (TimeoutException e) {
+                plugin.getLogger().error("Whitelist check timeout for {} after {} seconds",
+                        player.getUsername(), WHITELIST_CHECK_TIMEOUT_SECONDS);
+                isWhitelisted = false;
+            } catch (Exception e) {
+                plugin.getLogger().error("Error checking whitelist for " + player.getUsername() + 
+                        " on server " + serverName, e);
+                isWhitelisted = false;
+            }
+            
+            if (!isWhitelisted) {
+                String kickMessage = plugin.getConfig().getKickMessage()
+                        .replace("%player%", player.getUsername())
+                        .replace("%server%", serverName);
+
+                event.setResult(ServerPreConnectEvent.ServerResult.denied());
+                player.sendMessage(serializer.deserialize(kickMessage));
+
+                if (plugin.getConfig().isDebug()) {
+                    plugin.getLogger().info("Denied {} connection to {} - not whitelisted",
+                            player.getUsername(), serverName);
+                }
+            } else {
+                if (plugin.getConfig().isDebug()) {
+                    plugin.getLogger().info("Allowed {} connection to {} - whitelisted", 
+                            player.getUsername(), serverName);
+                }
+            }
         } catch (Exception e) {
-            plugin.getLogger().error("Error checking whitelist for " + player.getUsername(), e);
-            isWhitelisted = false;
-        }
-        
-        if (!isWhitelisted) {
-            String kickMessage = plugin.getConfig().getKickMessage()
-                    .replace("%player%", player.getUsername())
-                    .replace("%server%", serverName);
-
-            player.disconnect(serializer.deserialize(kickMessage));
-
-            if (plugin.getConfig().isDebug()) {
-                plugin.getLogger().info("Denied {} connection to {} - not whitelisted",
-                        player.getUsername(), serverName);
-            }
-        } else {
-            if (plugin.getConfig().isDebug()) {
-                plugin.getLogger().info("Allowed {} connection to {} - whitelisted", 
-                        player.getUsername(), serverName);
-            }
+            plugin.getLogger().error("Unexpected error in ServerPreConnectEvent", e);
+            event.setResult(ServerPreConnectEvent.ServerResult.denied());
+            event.getPlayer().sendMessage(serializer.deserialize(
+                    "&cПроизошла ошибка при проверке доступа. Попробуйте позже."));
         }
     }
 }

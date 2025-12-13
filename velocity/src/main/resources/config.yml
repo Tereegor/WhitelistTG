@@ -15,12 +15,18 @@ messages:
   whitelist-disabled: "&aВайтлист на сервере &6%server% &aотключен."
 
 # Servers that bypass whitelist check (e.g., lobby)
+# Players can join these servers without being whitelisted
 bypass-servers:
   - lobby
   - hub
 
+# Servers that require whitelist (leave empty to check all non-bypass servers)
+# If specified, only these servers will require whitelist check
+# If empty, all servers except bypass-servers will require whitelist
+whitelist-servers: [duckhood, duckburg]
+
 # Database settings (should match Bukkit plugin)
-storage: H2
+storage: SQLITE
 
 database:
   host: localhost

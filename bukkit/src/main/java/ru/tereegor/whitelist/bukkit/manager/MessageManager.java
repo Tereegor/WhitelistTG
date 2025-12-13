@@ -12,7 +12,9 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MessageManager {
@@ -200,24 +202,84 @@ public class MessageManager {
     }
     
     public String getRawTelegram(String key, TagResolver... resolvers) {
-        String raw = getRaw(key);
+        String rawMessage = messages.getString(key, "<red>Missing: " + key);
+        String processed = processColors(rawMessage);
+        
+        Component component;
         if (resolvers.length > 0) {
-            Component component = miniMessage.deserialize(raw, resolvers);
-            raw = miniMessage.serialize(component);
+            component = miniMessage.deserialize(processed, resolvers);
+        } else {
+            component = miniMessage.deserialize(processed);
         }
-        return convertMiniMessageToHtml(raw);
+        
+        String plainText = componentToPlainText(component);
+        
+        if ("telegram.code-message".equals(key)) {
+            return formatCodeMessageForTelegram(plainText);
+        }
+        
+        return escapeHtml(plainText);
     }
     
-    private String convertMiniMessageToHtml(String text) {
-        if (text == null) return "";
-        String result = text;
-        result = result.replace("<strong>", "<b>").replace("</strong>", "</b>");
-        result = result.replace("<em>", "<i>").replace("</em>", "</i>");
-        result = result.replaceAll("&lt;code&gt;", "<code>").replaceAll("&lt;/code&gt;", "</code>");
-        result = result.replaceAll("&lt;b&gt;", "<b>").replaceAll("&lt;/b&gt;", "</b>");
-        result = result.replaceAll("&lt;i&gt;", "<i>").replaceAll("&lt;/i&gt;", "</i>");
-        result = result.replaceAll("<[^>/]+>", "");
-        result = result.replace("&amp;", "&");
+    private String formatCodeMessageForTelegram(String plainText) {
+        if (plainText == null) return "";
+        
+        String result = plainText;
+        java.util.regex.Pattern codePattern = java.util.regex.Pattern.compile("\\b([A-Z0-9]{3}-[A-Z0-9]{3})\\b");
+        java.util.regex.Matcher matcher = codePattern.matcher(result);
+        
+        List<String> codes = new ArrayList<>();
+        StringBuffer sb = new StringBuffer();
+        char markerStart = '\uE000';
+        int codeIndex = 0;
+        while (matcher.find()) {
+            String code = matcher.group(1);
+            codes.add(code);
+            String marker = String.valueOf((char)(markerStart + codeIndex));
+            matcher.appendReplacement(sb, marker);
+            codeIndex++;
+        }
+        matcher.appendTail(sb);
+        result = sb.toString();
+        
+        result = escapeHtml(result);
+        
+        for (int i = 0; i < codes.size(); i++) {
+            char marker = (char)(markerStart + i);
+            String code = escapeHtml(codes.get(i));
+            result = result.replace(String.valueOf(marker), "<code>" + code + "</code>");
+        }
+        
         return result;
+    }
+    
+    private String componentToPlainText(Component component) {
+        if (component == null) return "";
+        StringBuilder builder = new StringBuilder();
+        buildText(component, builder);
+        return builder.toString();
+    }
+    
+    private void buildText(Component component, StringBuilder builder) {
+        if (component == null) return;
+        
+        if (component instanceof net.kyori.adventure.text.TextComponent) {
+            net.kyori.adventure.text.TextComponent textComponent = (net.kyori.adventure.text.TextComponent) component;
+            String content = textComponent.content();
+            if (content != null && !content.isEmpty()) {
+                builder.append(content);
+            }
+        }
+        
+        for (Component child : component.children()) {
+            buildText(child, builder);
+        }
+    }
+    
+    private String escapeHtml(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;");
     }
 }

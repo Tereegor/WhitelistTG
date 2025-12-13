@@ -4,6 +4,8 @@ import lombok.Getter;
 import org.bukkit.configuration.file.FileConfiguration;
 import ru.tereegor.whitelist.bukkit.WhitelistPlugin;
 
+import java.util.List;
+
 @Getter
 public class PluginConfig {
     
@@ -17,6 +19,7 @@ public class PluginConfig {
     private boolean autoAdd;
     private final String kickMessage;
     private final int codeExpirationMinutes;
+    private final List<String> addToServers;
     
     private final boolean telegramEnabled;
     private final String telegramToken;
@@ -41,6 +44,7 @@ public class PluginConfig {
         this.kickMessage = config.getString("whitelist.kick-message", 
                 "&cВы не в вайтлисте сервера %server%");
         this.codeExpirationMinutes = config.getInt("whitelist.code-expiration-minutes", 30);
+        this.addToServers = config.getStringList("whitelist.add-to-servers");
         
         this.telegramEnabled = config.getBoolean("telegram.enabled", false);
         this.telegramToken = config.getString("telegram.token", "");
@@ -68,5 +72,12 @@ public class PluginConfig {
         this.autoAdd = enabled;
         plugin.getConfig().set("whitelist.auto-add", enabled);
         plugin.saveConfig();
+    }
+    
+    public List<String> getServersToAddOnActivation() {
+        if (addToServers == null || addToServers.isEmpty()) {
+            return List.of(serverName);
+        }
+        return addToServers;
     }
 }

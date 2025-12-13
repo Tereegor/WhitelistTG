@@ -54,6 +54,10 @@ info-added-by: "<text-secondary>Добавил: <info><added_by>"
 info-date: "<text-secondary>Дата добавления: <info><date>"
 info-no-entries: "<error>У игрока нет записей в вайтлисте."
 
+# Kick messages
+kick:
+  not-whitelisted: "<red>У вас нет доступа к серверу <gold><server><red>!\n<gray>Получите проходку через Telegram бот."
+
 # Code activation
 code:
   usage: "<error>Использование: <info>/code <код>"
@@ -94,6 +98,6 @@ telegram:
   accept-button: "Принимаю правила"
   already-linked: "Ваш аккаунт уже привязан к игроку: <player>"
   code-generation-error: "Ошибка генерации кода. Попробуйте позже."
-  code-message: "Ваш код для регистрации:\n\n<code><code></code>\n\nЗайдите на сервер и введите команду:\n<code>/code <code></code>\n\nКод действителен <minutes> минут."
+  code-message: "Ваш код для регистрации:\n\n<code>\n\nЗайдите на сервер и введите команду:\n/code <code>\n\nКод действителен <minutes> минут."
   no-active-code: "У вас нет активного кода. Нажмите /start для получения нового кода."
   help-message: "Доступные команды:\n\n/start - Начать регистрацию\n/code - Показать текущий код\n/help - Показать эту справку\n\nСервер: <server>"

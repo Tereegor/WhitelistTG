@@ -551,7 +551,13 @@ public class SqlStorage implements WhitelistStorage, TelegramStorage {
     @Override
     public CompletableFuture<RegistrationCode> createCode(RegistrationCode code) {
         return CompletableFuture.supplyAsync(() -> {
-            String sql = """
+            boolean isSqlite = config.getStorageType() == StorageType.SQLITE;
+            
+            String sql = isSqlite ? """
+                INSERT INTO registration_codes 
+                (code, telegram_id, telegram_username, player_name, created_at, expires_at, used)
+                VALUES (?, ?, ?, ?, ?, ?, 0)
+            """ : """
                 INSERT INTO registration_codes 
                 (code, telegram_id, telegram_username, player_name, created_at, expires_at, used)
                 VALUES (?, ?, ?, ?, ?, ?, FALSE)
@@ -564,8 +570,14 @@ public class SqlStorage implements WhitelistStorage, TelegramStorage {
                 ps.setLong(2, code.getTelegramId());
                 ps.setString(3, code.getTelegramUsername());
                 ps.setString(4, code.getPlayerName());
-                ps.setTimestamp(5, Timestamp.from(code.getCreatedAt() != null ? code.getCreatedAt() : Instant.now()));
-                ps.setTimestamp(6, Timestamp.from(code.getExpiresAt()));
+                
+                if (isSqlite) {
+                    ps.setLong(5, code.getCreatedAt() != null ? code.getCreatedAt().toEpochMilli() : System.currentTimeMillis());
+                    ps.setLong(6, code.getExpiresAt().toEpochMilli());
+                } else {
+                    ps.setTimestamp(5, Timestamp.from(code.getCreatedAt() != null ? code.getCreatedAt() : Instant.now()));
+                    ps.setTimestamp(6, Timestamp.from(code.getExpiresAt()));
+                }
                 
                 ps.executeUpdate();
                 return code;
@@ -587,7 +599,8 @@ public class SqlStorage implements WhitelistStorage, TelegramStorage {
                 
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
-                        return Optional.of(mapCode(rs));
+                        RegistrationCode found = mapCodeSafe(rs);
+                        return Optional.of(found);
                     }
                 }
                 return Optional.empty();
@@ -600,7 +613,14 @@ public class SqlStorage implements WhitelistStorage, TelegramStorage {
     @Override
     public CompletableFuture<Optional<RegistrationCode>> getActiveCodeByTelegramId(Long telegramId) {
         return CompletableFuture.supplyAsync(() -> {
-            String sql = """
+            boolean isSqlite = config.getStorageType() == StorageType.SQLITE;
+            long currentTimeMillis = System.currentTimeMillis();
+            
+            String sql = isSqlite ? """
+                SELECT * FROM registration_codes 
+                WHERE telegram_id = ? AND used = 0 AND expires_at > ?
+                ORDER BY created_at DESC LIMIT 1
+            """ : """
                 SELECT * FROM registration_codes 
                 WHERE telegram_id = ? AND used = FALSE AND expires_at > CURRENT_TIMESTAMP
                 ORDER BY created_at DESC LIMIT 1
@@ -610,10 +630,13 @@ public class SqlStorage implements WhitelistStorage, TelegramStorage {
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 
                 ps.setLong(1, telegramId);
+                if (isSqlite) {
+                    ps.setLong(2, currentTimeMillis);
+                }
                 
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
-                        return Optional.of(mapCode(rs));
+                        return Optional.of(mapCodeSafe(rs));
                     }
                 }
                 return Optional.empty();
@@ -626,7 +649,14 @@ public class SqlStorage implements WhitelistStorage, TelegramStorage {
     @Override
     public CompletableFuture<Boolean> useCode(String code, UUID playerUuid, String playerName) {
         return CompletableFuture.supplyAsync(() -> {
-            String sql = """
+            boolean isSqlite = config.getStorageType() == StorageType.SQLITE;
+            long currentTimeMillis = System.currentTimeMillis();
+            
+            String sql = isSqlite ? """
+                UPDATE registration_codes 
+                SET used = 1, used_by_uuid = ?, used_by_name = ?, used_at = ?
+                WHERE code = ? AND used = 0 AND expires_at > ?
+            """ : """
                 UPDATE registration_codes 
                 SET used = TRUE, used_by_uuid = ?, used_by_name = ?, used_at = CURRENT_TIMESTAMP
                 WHERE code = ? AND used = FALSE AND expires_at > CURRENT_TIMESTAMP
@@ -637,7 +667,13 @@ public class SqlStorage implements WhitelistStorage, TelegramStorage {
                 
                 ps.setString(1, playerUuid.toString());
                 ps.setString(2, playerName);
-                ps.setString(3, code);
+                if (isSqlite) {
+                    ps.setLong(3, currentTimeMillis);
+                    ps.setString(4, code);
+                    ps.setLong(5, currentTimeMillis);
+                } else {
+                    ps.setString(3, code);
+                }
                 
                 return ps.executeUpdate() > 0;
             } catch (SQLException e) {
@@ -649,10 +685,19 @@ public class SqlStorage implements WhitelistStorage, TelegramStorage {
     @Override
     public CompletableFuture<Integer> deleteExpiredCodes() {
         return CompletableFuture.supplyAsync(() -> {
-            String sql = "DELETE FROM registration_codes WHERE expires_at < CURRENT_TIMESTAMP";
+            boolean isSqlite = config.getStorageType() == StorageType.SQLITE;
+            long currentTimeMillis = System.currentTimeMillis();
+            
+            String sql = isSqlite ? 
+                "DELETE FROM registration_codes WHERE expires_at < ?" :
+                "DELETE FROM registration_codes WHERE expires_at < CURRENT_TIMESTAMP";
             
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
+                
+                if (isSqlite) {
+                    ps.setLong(1, currentTimeMillis);
+                }
                 
                 return ps.executeUpdate();
             } catch (SQLException e) {
@@ -841,6 +886,51 @@ public class SqlStorage implements WhitelistStorage, TelegramStorage {
                 .usedByUuid(rs.getString("used_by_uuid"))
                 .usedByName(rs.getString("used_by_name"))
                 .usedAt(rs.getTimestamp("used_at") != null ? rs.getTimestamp("used_at").toInstant() : null)
+                .build();
+    }
+    
+    private RegistrationCode mapCodeSafe(ResultSet rs) throws SQLException {
+        Instant createdAt;
+        Instant expiresAt;
+        Instant usedAt = null;
+        
+        try {
+            Timestamp ts = rs.getTimestamp("created_at");
+            createdAt = ts != null ? ts.toInstant() : Instant.now();
+        } catch (Exception e) {
+            long millis = rs.getLong("created_at");
+            createdAt = Instant.ofEpochMilli(millis);
+        }
+        
+        try {
+            Timestamp ts = rs.getTimestamp("expires_at");
+            expiresAt = ts != null ? ts.toInstant() : Instant.now().plusSeconds(1800);
+        } catch (Exception e) {
+            long millis = rs.getLong("expires_at");
+            expiresAt = Instant.ofEpochMilli(millis);
+        }
+        
+        try {
+            Timestamp ts = rs.getTimestamp("used_at");
+            usedAt = ts != null ? ts.toInstant() : null;
+        } catch (Exception e) {
+            long millis = rs.getLong("used_at");
+            if (!rs.wasNull() && millis > 0) {
+                usedAt = Instant.ofEpochMilli(millis);
+            }
+        }
+        
+        return RegistrationCode.builder()
+                .code(rs.getString("code"))
+                .telegramId(rs.getLong("telegram_id"))
+                .telegramUsername(rs.getString("telegram_username"))
+                .playerName(rs.getString("player_name"))
+                .createdAt(createdAt)
+                .expiresAt(expiresAt)
+                .used(rs.getBoolean("used"))
+                .usedByUuid(rs.getString("used_by_uuid"))
+                .usedByName(rs.getString("used_by_name"))
+                .usedAt(usedAt)
                 .build();
     }
     

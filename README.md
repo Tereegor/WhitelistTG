@@ -1,6 +1,6 @@
 # WhitelistTG
 
-**Версия:** 1.0.3  
+**Версия:** 1.1.0  
 **Платформы:** Bukkit 1.21+, Velocity 3.3+  
 **Java:** 17+  
 **Автор:** Tereegor
@@ -91,17 +91,17 @@ mvn clean package -DskipTests
 ```
 
 После сборки JAR-файлы располагаются в следующих директориях:
-- `bukkit/target/whitelist-bukkit-1.0.3.jar`
-- `velocity/target/whitelist-velocity-1.0.3.jar`
+- `bukkit/target/whitelist-bukkit-1.1.0.jar`
+- `velocity/target/whitelist-velocity-1.1.0.jar`
 
 ### Размещение файлов
 
 | Файл | Назначение |
 |------|------------|
-| `whitelist-bukkit-1.0.3.jar` | Директория `plugins/` серверов Paper/Spigot |
-| `whitelist-velocity-1.0.3.jar` | Директория `plugins/` прокси Velocity |
+| `whitelist-bukkit-1.1.0.jar` | Директория `plugins/` серверов Paper/Spigot |
+| `whitelist-velocity-1.1.0.jar` | Директория `plugins/` прокси Velocity |
 
-> **Важно:** Файл `whitelist-common-1.0.3.jar` размещать не требуется — он автоматически включён в состав bukkit и velocity модулей.
+> **Важно:** Файл `whitelist-common-1.1.0.jar` размещать не требуется — он автоматически включён в состав bukkit и velocity модулей.
 
 ---
 
@@ -113,6 +113,33 @@ mvn clean package -DskipTests
 - `telegram.token` — токен Telegram бота (получить у @BotFather)
 - `telegram.username` — username бота (без @)
 - `database.username` и `database.password` — если используется MySQL/MariaDB
+
+#### Добавление на несколько серверов
+
+При активации кода игрок может быть автоматически добавлен на несколько серверов:
+
+```yaml
+whitelist:
+  add-to-servers:
+    - duckhood
+```
+
+### Velocity-модуль
+
+#### Управление проверкой вайтлиста
+
+```yaml
+bypass-servers:
+  - lobby
+  - hub
+
+whitelist-servers: [duckhood, duckburg]
+
+```
+
+**Логика работы:**
+- Если `whitelist-servers` пуст — проверка на всех серверах кроме `bypass-servers`
+- Если `whitelist-servers` указан — проверка только на этих серверах
 
 ---
 
@@ -297,6 +324,11 @@ telegram:
 bypass-servers:
   - hub
 
+# Проверять вайтлист только на этих серверах (если пусто — на всех кроме bypass)
+whitelist-servers:
+  - duckhood
+  - duckburg
+
 database:
   host: localhost
   database: whitelist
@@ -308,6 +340,7 @@ database:
    - Whitelist отключён (`enabled: false`)
    - Telegram-бот активен (`enabled: true`)
    - Команда `/code` доступна всем игрокам
+   - `add-to-servers: [duckhood, duckburg]` — при активации кода игрок сразу получает доступ ко всем серверам
 
 2. **Игровые серверы (duckhood, duckburg):**
    - Whitelist включён (`enabled: true`)
@@ -318,6 +351,7 @@ database:
 
 3. **Velocity:**
    - Hub добавлен в `bypass-servers`
+   - `whitelist-servers` указывает серверы с проверкой (или пусто для проверки всех)
    - Единые параметры подключения к БД со всеми серверами
 
 4. **База данных:**

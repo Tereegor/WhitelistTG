@@ -39,6 +39,10 @@ public class CodeCommand implements CommandExecutor {
         String normalizedCode = code.contains("-") ? code : 
                 (code.length() >= 6 ? code.substring(0, 3) + "-" + code.substring(3) : code);
         
+        if (plugin.getPluginConfig().isDebug()) {
+            plugin.getLogger().info("Player " + player.getName() + " trying to activate code: " + normalizedCode);
+        }
+        
         plugin.getWhitelistManager().activateCode(normalizedCode, player.getUniqueId(), player.getName())
                 .thenAccept(result -> {
                     plugin.getServer().getScheduler().runTask(plugin, () -> {
@@ -48,9 +52,23 @@ public class CodeCommand implements CommandExecutor {
                                     placeholder("server", plugin.getPluginConfig().getServerName()));
                             msg.send(player, "code.linked");
                         } else {
+                            if (plugin.getPluginConfig().isDebug()) {
+                                plugin.getLogger().info("Code activation failed for " + player.getName() + 
+                                        ": " + result.messageKey());
+                            }
                             msg.send(player, result.messageKey());
                         }
                     });
+                })
+                .exceptionally(e -> {
+                    plugin.getLogger().warning("Error activating code for " + player.getName() + ": " + e.getMessage());
+                    if (plugin.getPluginConfig().isDebug()) {
+                        e.printStackTrace();
+                    }
+                    plugin.getServer().getScheduler().runTask(plugin, () -> {
+                        msg.send(player, "code.invalid");
+                    });
+                    return null;
                 });
         
         return true;
