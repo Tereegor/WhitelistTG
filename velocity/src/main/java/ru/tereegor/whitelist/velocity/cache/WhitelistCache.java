@@ -11,9 +11,7 @@ public class WhitelistCache {
     private final SqlStorage storage;
     private final long ttlMillis;
     private final int maxSize;
-    
     private final Map<String, CacheEntry<Boolean>> whitelistCache;
-    
     private final ScheduledExecutorService cleaner;
     
     public WhitelistCache(SqlStorage storage, int ttlSeconds, int maxSize) {
@@ -27,29 +25,39 @@ public class WhitelistCache {
     }
     
     public CompletableFuture<Boolean> isWhitelisted(UUID playerUuid, String serverName) {
-        String key = playerUuid.toString() + ":" + serverName;
+        String key = createKey(playerUuid, serverName);
         
         CacheEntry<Boolean> cached = whitelistCache.get(key);
         if (cached != null && !cached.isExpired()) {
             return CompletableFuture.completedFuture(cached.value());
         }
         
-        return storage.isWhitelisted(playerUuid, serverName).thenApply(result -> {
-            if (whitelistCache.size() >= maxSize) {
-                whitelistCache.entrySet().removeIf(e -> e.getValue().isExpired());
-                
-                if (whitelistCache.size() >= maxSize) {
-                    String oldestKey = whitelistCache.keySet().iterator().next();
-                    whitelistCache.remove(oldestKey);
-                }
-            }
-            whitelistCache.put(key, new CacheEntry<>(result, System.currentTimeMillis() + ttlMillis));
-            return result;
-        });
+        return storage.isWhitelisted(playerUuid, serverName)
+                .thenApply(result -> {
+                    cacheResult(key, result);
+                    return result;
+                });
+    }
+    
+    private void cacheResult(String key, Boolean result) {
+        ensureCapacity();
+        whitelistCache.put(key, new CacheEntry<>(result, System.currentTimeMillis() + ttlMillis));
+    }
+    
+    private void ensureCapacity() {
+        if (whitelistCache.size() < maxSize) {
+            return;
+        }
+        
+        whitelistCache.entrySet().removeIf(e -> e.getValue().isExpired());
+        
+        if (whitelistCache.size() >= maxSize) {
+            whitelistCache.keySet().stream().findFirst().ifPresent(whitelistCache::remove);
+        }
     }
     
     public void invalidate(UUID playerUuid, String serverName) {
-        whitelistCache.remove(playerUuid.toString() + ":" + serverName);
+        whitelistCache.remove(createKey(playerUuid, serverName));
     }
     
     public void invalidatePlayer(UUID playerUuid) {
@@ -74,10 +82,13 @@ public class WhitelistCache {
         cleaner.shutdown();
     }
     
+    private String createKey(UUID playerUuid, String serverName) {
+        return playerUuid.toString() + ":" + serverName;
+    }
+    
     private record CacheEntry<T>(T value, long expiresAt) {
         boolean isExpired() {
             return System.currentTimeMillis() > expiresAt;
         }
     }
 }
-

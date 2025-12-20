@@ -25,7 +25,7 @@ import java.nio.file.Path;
 @Plugin(
         id = "whitelisttg",
         name = "WhitelistTG",
-        version = "1.1.0",
+        version = "1.1.1",
         description = "Multi-server whitelist with Telegram integration",
         authors = {"Math_Tereegor"}
 )

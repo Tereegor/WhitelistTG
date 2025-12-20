@@ -1,56 +1,64 @@
 package ru.tereegor.whitelist.bukkit.listener;
 
-import java.util.UUID;
-
+import lombok.RequiredArgsConstructor;
+import net.kyori.adventure.text.Component;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
-
-import net.kyori.adventure.text.Component;
 import ru.tereegor.whitelist.bukkit.WhitelistPlugin;
 import ru.tereegor.whitelist.bukkit.config.PluginConfig;
-import ru.tereegor.whitelist.bukkit.manager.MessageManager;
 
+import java.util.UUID;
+
+import static ru.tereegor.whitelist.bukkit.manager.MessageManager.placeholder;
+
+@RequiredArgsConstructor
 public class PlayerLoginListener implements Listener {
 
     private final WhitelistPlugin plugin;
 
-    public PlayerLoginListener(WhitelistPlugin plugin) {
-        this.plugin = plugin;
+    private PluginConfig config() {
+        return plugin.getPluginConfig();
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
-        PluginConfig config = plugin.getPluginConfig();
-
-        if (!config.isWhitelistEnabled()) {
+        if (!config().isWhitelistEnabled()) {
             return;
         }
 
         UUID playerUuid = event.getUniqueId();
         String playerName = event.getName();
 
-        boolean isWhitelisted;
-        try {
-            isWhitelisted = plugin.getStorage()
-                    .isWhitelisted(playerUuid, config.getServerName())
-                    .join();
-        } catch (Exception e) {
-            plugin.getLogger().severe("Error checking whitelist for " + playerName + ": " + e.getMessage());
-            e.printStackTrace();
-            isWhitelisted = false;
-        }
+        boolean isWhitelisted = checkWhitelist(playerUuid, playerName);
 
         if (!isWhitelisted) {
             Component kickMessage = plugin.getMessageManager().getComponentNoPrefix("kick.not-whitelisted",
-                    MessageManager.placeholder("player", playerName),
-                    MessageManager.placeholder("server", config.getServerDisplayName()));
+                    placeholder("player", playerName),
+                    placeholder("server", config().getServerDisplayName()));
+            
             event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST, kickMessage);
-
-            if (config.isDebug()) {
-                plugin.getLogger().info("Denied " + playerName + " connection - not whitelisted");
-            }
+            debug("Denied %s connection - not whitelisted".formatted(playerName));
+        }
+    }
+    
+    private boolean checkWhitelist(UUID playerUuid, String playerName) {
+        try {
+            return plugin.getStorage()
+                    .isWhitelisted(playerUuid, config().getServerName())
+                    .join();
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error checking whitelist for %s: %s"
+                    .formatted(playerName, e.getMessage()));
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    private void debug(String message) {
+        if (config().isDebug()) {
+            plugin.getLogger().info(message);
         }
     }
 }

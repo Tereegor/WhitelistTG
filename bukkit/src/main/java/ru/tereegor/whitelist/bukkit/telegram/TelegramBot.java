@@ -1,8 +1,5 @@
 package ru.tereegor.whitelist.bukkit.telegram;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -11,17 +8,21 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
-
 import ru.tereegor.whitelist.bukkit.WhitelistPlugin;
 import ru.tereegor.whitelist.bukkit.manager.MessageManager;
+import ru.tereegor.whitelist.common.model.PlayerLink;
 import ru.tereegor.whitelist.common.model.RegistrationCode;
+
+import java.util.List;
+import java.util.Optional;
+
+import static ru.tereegor.whitelist.bukkit.manager.MessageManager.placeholder;
 
 public class TelegramBot extends TelegramLongPollingBot {
 
     private final WhitelistPlugin plugin;
     private final MessageManager messageManager;
     private final String botUsername;
-    private TelegramBotsApi botsApi;
     private DefaultBotSession botSession;
 
     public TelegramBot(WhitelistPlugin plugin) {
@@ -33,34 +34,27 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     public void start() {
         try {
-            this.botsApi = new TelegramBotsApi(DefaultBotSession.class);
+            TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
             this.botSession = (DefaultBotSession) botsApi.registerBot(this);
-            plugin.getLogger().info("Telegram bot started successfully!");
+            log("Telegram bot started successfully!");
         } catch (TelegramApiException e) {
-            plugin.getLogger().severe("Failed to start Telegram bot: " + e.getMessage());
-            plugin.getLogger().severe("Check your telegram.token and telegram.username in config.yml");
-            if (plugin.getPluginConfig().isDebug()) {
-                e.printStackTrace();
-            }
+            logError("Failed to start Telegram bot: " + e.getMessage());
+            logError("Check your telegram.token and telegram.username in config.yml");
+            debugPrint(e);
         } catch (Exception e) {
-            plugin.getLogger().severe("Unexpected error starting Telegram bot: " + e.getMessage());
-            plugin.getLogger().severe("This might be a network issue. Check your internet connection.");
-            if (plugin.getPluginConfig().isDebug()) {
-                e.printStackTrace();
-            }
+            logError("Unexpected error starting Telegram bot: " + e.getMessage());
+            debugPrint(e);
         }
     }
 
     public void stop() {
-        try {
-            if (botSession != null && botSession.isRunning()) {
+        if (botSession != null && botSession.isRunning()) {
+            try {
                 botSession.stop();
-                plugin.getLogger().info("Telegram bot stopped successfully!");
-            }
-        } catch (Exception e) {
-            plugin.getLogger().warning("Error stopping Telegram bot: " + e.getMessage());
-            if (plugin.getPluginConfig().isDebug()) {
-                e.printStackTrace();
+                log("Telegram bot stopped successfully!");
+            } catch (Exception e) {
+                plugin.getLogger().warning("Error stopping Telegram bot: " + e.getMessage());
+                debugPrint(e);
             }
         }
     }
@@ -80,9 +74,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
         } catch (Exception e) {
             plugin.getLogger().warning("Error processing Telegram update: " + e.getMessage());
-            if (plugin.getPluginConfig().isDebug()) {
-                e.printStackTrace();
-            }
+            debugPrint(e);
         }
     }
 
@@ -95,7 +87,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (text.startsWith("/start")) {
             sendRulesMessage(chatId);
         } else if (text.startsWith("/code")) {
-            sendExistingCode(chatId, userId, username);
+            handleCodeCommand(chatId, userId, username);
         } else if (text.startsWith("/help")) {
             sendHelpMessage(chatId);
         }
@@ -119,108 +111,111 @@ public class TelegramBot extends TelegramLongPollingBot {
         acceptButton.setText(messageManager.getRaw("telegram.accept-button"));
         acceptButton.setCallbackData("accept_rules");
 
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(acceptButton);
-
-        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
-        keyboard.add(row);
-
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
-        markup.setKeyboard(keyboard);
+        markup.setKeyboard(List.of(List.of(acceptButton)));
 
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId.toString());
-        message.setText(rules);
-        message.setParseMode("HTML");
-        message.setReplyMarkup(markup);
-
-        try {
-            execute(message);
-        } catch (TelegramApiException e) {
-            plugin.getLogger().warning("Failed to send rules message: " + e.getMessage());
-        }
+        sendHtmlMessage(chatId, rules, markup);
     }
 
     private void generateAndSendCode(Long chatId, Long userId, String username) {
-        plugin.getWhitelistManager().getLinkByTelegram(userId).thenAccept(optLink -> {
-            if (optLink.isPresent()) {
-                String linkedMessage = messageManager.getRawTelegram("telegram.already-linked",
-                        MessageManager.placeholder("player", optLink.get().getPlayerName()));
-                sendText(chatId, linkedMessage);
-                return;
-            }
-
-            plugin.getWhitelistManager().getActiveCode(userId).thenAccept(optCode -> {
-                if (optCode.isPresent()) {
-                    RegistrationCode existingCode = optCode.get();
-                    sendCodeMessage(chatId, existingCode.getCode());
-                    return;
-                }
-
-                plugin.getWhitelistManager().generateCode(userId, username).thenAccept(code -> {
-                    if (plugin.getPluginConfig().isDebug()) {
-                        plugin.getLogger().info("[DEBUG] Generated code: " + code.getCode() + 
-                                " for telegramId: " + userId + ", expires: " + code.getExpiresAt());
+        plugin.getWhitelistManager().getLinkByTelegram(userId)
+                .thenCompose(optLink -> {
+                    if (optLink.isPresent()) {
+                        sendAlreadyLinkedMessage(chatId, optLink.get());
+                        return java.util.concurrent.CompletableFuture.completedFuture(Optional.<RegistrationCode>empty());
                     }
-                    sendCodeMessage(chatId, code.getCode());
-                }).exceptionally(e -> {
+                    return checkExistingCodeOrGenerate(chatId, userId, username);
+                })
+                .exceptionally(e -> {
                     sendText(chatId, messageManager.getRaw("telegram.code-generation-error"));
-                    plugin.getLogger().warning("Code generation error: " + e.getMessage());
-                    if (plugin.getPluginConfig().isDebug()) {
-                        e.printStackTrace();
-                    }
-                    return null;
+                    logError("Code generation error: " + e.getMessage());
+                    debugPrint(e);
+                    return Optional.empty();
                 });
-            });
-        });
+    }
+    
+    private java.util.concurrent.CompletableFuture<Optional<RegistrationCode>> checkExistingCodeOrGenerate(
+            Long chatId, Long userId, String username) {
+        
+        return plugin.getWhitelistManager().getActiveCode(userId)
+                .thenCompose(optCode -> {
+                    if (optCode.isPresent()) {
+                        sendCodeMessage(chatId, optCode.get().getCode());
+                        return java.util.concurrent.CompletableFuture.completedFuture(optCode);
+                    }
+                    return generateNewCode(chatId, userId, username);
+                });
+    }
+    
+    private java.util.concurrent.CompletableFuture<Optional<RegistrationCode>> generateNewCode(
+            Long chatId, Long userId, String username) {
+        
+        return plugin.getWhitelistManager().generateCode(userId, username)
+                .thenApply(code -> {
+                    debug("Generated code: %s for telegramId: %d, expires: %s"
+                            .formatted(code.getCode(), userId, code.getExpiresAt()));
+                    sendCodeMessage(chatId, code.getCode());
+                    return Optional.of(code);
+                });
+    }
+    
+    private void sendAlreadyLinkedMessage(Long chatId, PlayerLink link) {
+        String linkedMessage = messageManager.getRawTelegram("telegram.already-linked",
+                placeholder("player", link.getPlayerName()));
+        sendText(chatId, linkedMessage);
     }
 
     private void sendCodeMessage(Long chatId, String code) {
         String message = messageManager.getRawTelegram("telegram.code-message",
-                MessageManager.placeholder("code", code),
-                MessageManager.placeholder("minutes", String.valueOf(
-                        plugin.getPluginConfig().getCodeExpirationMinutes())));
+                placeholder("code", code),
+                placeholder("minutes", String.valueOf(plugin.getPluginConfig().getCodeExpirationMinutes())));
 
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(chatId.toString());
-        sendMessage.setText(message);
-        sendMessage.setParseMode("HTML");
-
-        try {
-            execute(sendMessage);
-        } catch (TelegramApiException e) {
-            plugin.getLogger().warning("Failed to send code message: " + e.getMessage());
-            if (plugin.getPluginConfig().isDebug()) {
-                e.printStackTrace();
-            }
-        }
+        sendHtmlMessage(chatId, message, null);
     }
 
-    private void sendExistingCode(Long chatId, Long userId, String username) {
-        plugin.getWhitelistManager().getLinkByTelegram(userId).thenAccept(optLink -> {
-            if (optLink.isPresent()) {
-                String linkedMessage = messageManager.getRawTelegram("telegram.already-linked",
-                        MessageManager.placeholder("player", optLink.get().getPlayerName()));
-                sendText(chatId, linkedMessage);
-                return;
-            }
-
-            plugin.getWhitelistManager().getActiveCode(userId).thenAccept(optCode -> {
-                if (optCode.isPresent()) {
-                    sendCodeMessage(chatId, optCode.get().getCode());
-                } else {
-                    sendText(chatId, messageManager.getRaw("telegram.no-active-code"));
-                }
-            });
-        });
+    private void handleCodeCommand(Long chatId, Long userId, String username) {
+        plugin.getWhitelistManager().getLinkByTelegram(userId)
+                .thenAccept(optLink -> {
+                    if (optLink.isPresent()) {
+                        sendAlreadyLinkedMessage(chatId, optLink.get());
+                        return;
+                    }
+                    sendExistingOrNoCode(chatId, userId);
+                });
+    }
+    
+    private void sendExistingOrNoCode(Long chatId, Long userId) {
+        plugin.getWhitelistManager().getActiveCode(userId)
+                .thenAccept(optCode -> {
+                    if (optCode.isPresent()) {
+                        sendCodeMessage(chatId, optCode.get().getCode());
+                    } else {
+                        sendText(chatId, messageManager.getRaw("telegram.no-active-code"));
+                    }
+                });
     }
 
     private void sendHelpMessage(Long chatId) {
         String help = messageManager.getRawTelegram("telegram.help-message",
-                MessageManager.placeholder("server",
-                        plugin.getPluginConfig().getServerDisplayName().replace("&", "")));
-
+                placeholder("server", plugin.getPluginConfig().getServerDisplayName().replace("&", "")));
         sendText(chatId, help);
+    }
+
+    private void sendHtmlMessage(Long chatId, String text, InlineKeyboardMarkup markup) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId.toString());
+        message.setText(text);
+        message.setParseMode("HTML");
+        if (markup != null) {
+            message.setReplyMarkup(markup);
+        }
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            plugin.getLogger().warning("Failed to send HTML message: " + e.getMessage());
+            debugPrint(e);
+        }
     }
 
     private void sendText(Long chatId, String text) {
@@ -234,5 +229,24 @@ public class TelegramBot extends TelegramLongPollingBot {
             plugin.getLogger().warning("Failed to send message: " + e.getMessage());
         }
     }
-
+    
+    private void log(String message) {
+        plugin.getLogger().info(message);
+    }
+    
+    private void logError(String message) {
+        plugin.getLogger().severe(message);
+    }
+    
+    private void debug(String message) {
+        if (plugin.getPluginConfig().isDebug()) {
+            plugin.getLogger().info("[DEBUG] " + message);
+        }
+    }
+    
+    private void debugPrint(Throwable e) {
+        if (plugin.getPluginConfig().isDebug()) {
+            e.printStackTrace();
+        }
+    }
 }

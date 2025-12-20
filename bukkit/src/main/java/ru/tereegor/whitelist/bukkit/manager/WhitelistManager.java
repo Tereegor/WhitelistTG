@@ -1,15 +1,9 @@
 package ru.tereegor.whitelist.bukkit.manager;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-
 import ru.tereegor.whitelist.bukkit.WhitelistPlugin;
 import ru.tereegor.whitelist.common.model.PlayerLink;
 import ru.tereegor.whitelist.common.model.RegistrationCode;
@@ -18,15 +12,18 @@ import ru.tereegor.whitelist.common.model.WhitelistEntry;
 import ru.tereegor.whitelist.common.storage.SqlStorage;
 import ru.tereegor.whitelist.common.util.CodeGenerator;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+
+@RequiredArgsConstructor
 public class WhitelistManager {
 
     private final WhitelistPlugin plugin;
     private final SqlStorage storage;
-
-    public WhitelistManager(WhitelistPlugin plugin, SqlStorage storage) {
-        this.plugin = plugin;
-        this.storage = storage;
-    }
 
     public String getServerName() {
         return plugin.getPluginConfig().getServerName();
@@ -39,12 +36,9 @@ public class WhitelistManager {
     public CompletableFuture<Boolean> isWhitelisted(UUID playerUuid, String playerName) {
         String serverName = getServerName();
         return storage.isWhitelisted(playerUuid, serverName)
-                .thenCompose(byUuid -> {
-                    if (byUuid) {
-                        return CompletableFuture.completedFuture(true);
-                    }
-                    return storage.isWhitelistedByName(playerName, serverName);
-                });
+                .thenCompose(byUuid -> byUuid 
+                        ? CompletableFuture.completedFuture(true)
+                        : storage.isWhitelistedByName(playerName, serverName));
     }
 
     public CompletableFuture<WhitelistEntry> addPlayer(UUID playerUuid, String playerName,
@@ -54,7 +48,6 @@ public class WhitelistManager {
     
     public CompletableFuture<WhitelistEntry> addPlayerToServer(UUID playerUuid, String playerName,
             String serverName, RegistrationType type, String reason, String addedBy) {
-
         WhitelistEntry entry = WhitelistEntry.builder()
                 .playerUuid(playerUuid)
                 .playerName(playerName)
@@ -76,22 +69,17 @@ public class WhitelistManager {
             return addPlayer(playerUuid, playerName, type, reason, addedBy);
         }
         
-        CompletableFuture<WhitelistEntry> result = CompletableFuture.completedFuture(null);
-        WhitelistEntry[] lastEntry = new WhitelistEntry[1];
+        @SuppressWarnings("unchecked")
+        CompletableFuture<WhitelistEntry>[] futures = servers.stream()
+                .map(server -> addPlayerToServer(playerUuid, playerName, server, type, reason, addedBy))
+                .toArray(CompletableFuture[]::new);
         
-        for (String server : servers) {
-            result = result.thenCompose(entry -> {
-                if (entry != null) lastEntry[0] = entry;
-                return addPlayerToServer(playerUuid, playerName, server, type, reason, addedBy);
-            });
-        }
-        
-        return result.thenApply(entry -> entry != null ? entry : lastEntry[0]);
+        return CompletableFuture.allOf(futures)
+                .thenApply(v -> futures[0].join());
     }
 
     public CompletableFuture<WhitelistEntry> addPlayerWithInvite(UUID playerUuid, String playerName,
             String reason, String inviterName, Long inviterTelegramId) {
-
         WhitelistEntry entry = WhitelistEntry.builder()
                 .playerUuid(playerUuid)
                 .playerName(playerName)
@@ -128,22 +116,19 @@ public class WhitelistManager {
     }
 
     public CompletableFuture<RegistrationCode> generateCode(Long telegramId, String telegramUsername) {
+        int expirationMinutes = plugin.getPluginConfig().getCodeExpirationMinutes();
+        
+        RegistrationCode code = RegistrationCode.builder()
+                .code(CodeGenerator.generateFormatted())
+                .telegramId(telegramId)
+                .telegramUsername(telegramUsername)
+                .createdAt(Instant.now())
+                .expiresAt(Instant.now().plus(expirationMinutes, ChronoUnit.MINUTES))
+                .used(false)
+                .build();
+
         return storage.invalidateCodesForTelegramId(telegramId)
-                .thenCompose(v -> {
-                    int expirationMinutes = plugin.getPluginConfig().getCodeExpirationMinutes();
-
-                    RegistrationCode code = RegistrationCode.builder()
-                            .code(CodeGenerator.generateFormatted())
-                            .telegramId(telegramId)
-                            .telegramUsername(telegramUsername)
-                            .playerName(null)
-                            .createdAt(Instant.now())
-                            .expiresAt(Instant.now().plus(expirationMinutes, ChronoUnit.MINUTES))
-                            .used(false)
-                            .build();
-
-                    return storage.createCode(code);
-                });
+                .thenCompose(v -> storage.createCode(code));
     }
 
     public CompletableFuture<Optional<RegistrationCode>> getActiveCode(Long telegramId) {
@@ -151,79 +136,95 @@ public class WhitelistManager {
     }
 
     public CompletableFuture<ActivationResult> activateCode(String code, UUID playerUuid, String playerName) {
-        if (plugin.getPluginConfig().isDebug()) {
-            plugin.getLogger().info("[DEBUG] Activating code: '" + code + "' for player: " + playerName);
-            plugin.getLogger().info("[DEBUG] Database path: " + plugin.getDataFolder().getAbsolutePath());
+        boolean debug = plugin.getPluginConfig().isDebug();
+        
+        if (debug) {
+            plugin.getLogger().info("[DEBUG] Activating code: '%s' for player: %s".formatted(code, playerName));
         }
         
-        return storage.getCode(code).thenCompose(optCode -> {
-            if (optCode.isEmpty()) {
-                if (plugin.getPluginConfig().isDebug()) {
-                    plugin.getLogger().info("[DEBUG] Code NOT FOUND in database: '" + code + "'");
-                }
-                return CompletableFuture.completedFuture(
-                        new ActivationResult(false, "code.invalid", null));
-            }
-
-            RegistrationCode regCode = optCode.get();
-            
-            if (plugin.getPluginConfig().isDebug()) {
-                plugin.getLogger().info("[DEBUG] Found code: " + regCode.getCode() + 
-                        ", used=" + regCode.isUsed() + 
-                        ", expired=" + regCode.isExpired() +
-                        ", expiresAt=" + regCode.getExpiresAt() +
-                        ", telegramId=" + regCode.getTelegramId());
-            }
-
-            if (!regCode.isValid()) {
-                if (plugin.getPluginConfig().isDebug()) {
-                    plugin.getLogger().info("[DEBUG] Code is invalid (used or expired)");
-                }
-                return CompletableFuture.completedFuture(
-                        new ActivationResult(false, "code.invalid", null));
-            }
-
-            return isWhitelisted(playerUuid).thenCompose(whitelisted -> {
-                if (whitelisted) {
-                    return CompletableFuture.completedFuture(
-                            new ActivationResult(false, "code.already-whitelisted", null));
-                }
-
-                return storage.isTelegramLinked(regCode.getTelegramId()).thenCompose(telegramLinked -> {
-                    if (telegramLinked) {
-                        return CompletableFuture.completedFuture(
-                                new ActivationResult(false, "code.telegram-already-linked", null));
+        return storage.getCode(code)
+                .thenCompose(optCode -> {
+                    if (optCode.isEmpty()) {
+                        if (debug) plugin.getLogger().info("[DEBUG] Code NOT FOUND: '%s'".formatted(code));
+                        return completedResult(false, "code.invalid");
                     }
-
-                    return storage.useCode(code, playerUuid, playerName).thenCompose(used -> {
-                        if (!used) {
-                            return CompletableFuture.completedFuture(
-                                    new ActivationResult(false, "code.invalid", null));
-                        }
-
-                        PlayerLink link = PlayerLink.builder()
-                                .playerUuid(playerUuid)
-                                .playerName(playerName)
-                                .telegramId(regCode.getTelegramId())
-                                .telegramUsername(regCode.getTelegramUsername())
-                                .linkedAt(Instant.now())
-                                .active(true)
-                                .build();
-
-                        return storage.createLink(link).thenCompose(savedLink -> {
-                            String reason = "Telegram: @" +
-                                    (regCode.getTelegramUsername() != null ? regCode.getTelegramUsername()
-                                            : regCode.getTelegramId());
-
-                            List<String> serversToAdd = plugin.getPluginConfig().getServersToAddOnActivation();
-                            return addPlayerToServers(playerUuid, playerName, serversToAdd,
-                                    RegistrationType.TELEGRAM_CODE, reason, "Telegram")
-                                    .thenApply(entry -> new ActivationResult(true, "code.success", entry));
-                        });
-                    });
+                    
+                    RegistrationCode regCode = optCode.get();
+                    if (debug) {
+                        plugin.getLogger().info("[DEBUG] Found code: %s, used=%b, expired=%b"
+                                .formatted(regCode.getCode(), regCode.isUsed(), regCode.isExpired()));
+                    }
+                    
+                    if (!regCode.isValid()) {
+                        if (debug) plugin.getLogger().info("[DEBUG] Code is invalid (used or expired)");
+                        return completedResult(false, "code.invalid");
+                    }
+                    
+                    return validateAndActivate(regCode, playerUuid, playerName);
                 });
-            });
-        });
+    }
+    
+    private CompletableFuture<ActivationResult> validateAndActivate(
+            RegistrationCode regCode, UUID playerUuid, String playerName) {
+        
+        return isWhitelisted(playerUuid)
+                .thenCompose(whitelisted -> {
+                    if (whitelisted) {
+                        return completedResult(false, "code.already-whitelisted");
+                    }
+                    return checkTelegramAndActivate(regCode, playerUuid, playerName);
+                });
+    }
+    
+    private CompletableFuture<ActivationResult> checkTelegramAndActivate(
+            RegistrationCode regCode, UUID playerUuid, String playerName) {
+        
+        return storage.isTelegramLinked(regCode.getTelegramId())
+                .thenCompose(telegramLinked -> {
+                    if (telegramLinked) {
+                        return completedResult(false, "code.telegram-already-linked");
+                    }
+                    return performActivation(regCode, playerUuid, playerName);
+                });
+    }
+    
+    private CompletableFuture<ActivationResult> performActivation(
+            RegistrationCode regCode, UUID playerUuid, String playerName) {
+        
+        return storage.useCode(regCode.getCode(), playerUuid, playerName)
+                .thenCompose(used -> {
+                    if (!used) {
+                        return completedResult(false, "code.invalid");
+                    }
+                    return createLinkAndWhitelist(regCode, playerUuid, playerName);
+                });
+    }
+    
+    private CompletableFuture<ActivationResult> createLinkAndWhitelist(
+            RegistrationCode regCode, UUID playerUuid, String playerName) {
+        
+        PlayerLink link = PlayerLink.builder()
+                .playerUuid(playerUuid)
+                .playerName(playerName)
+                .telegramId(regCode.getTelegramId())
+                .telegramUsername(regCode.getTelegramUsername())
+                .linkedAt(Instant.now())
+                .active(true)
+                .build();
+
+        String reason = "Telegram: @" + 
+                (regCode.getTelegramUsername() != null ? regCode.getTelegramUsername() : regCode.getTelegramId());
+        List<String> serversToAdd = plugin.getPluginConfig().getServersToAddOnActivation();
+
+        return storage.createLink(link)
+                .thenCompose(savedLink -> addPlayerToServers(
+                        playerUuid, playerName, serversToAdd,
+                        RegistrationType.TELEGRAM_CODE, reason, "Telegram"))
+                .thenApply(entry -> new ActivationResult(true, "code.success", entry));
+    }
+    
+    private CompletableFuture<ActivationResult> completedResult(boolean success, String messageKey) {
+        return CompletableFuture.completedFuture(new ActivationResult(success, messageKey, null));
     }
 
     public CompletableFuture<Optional<PlayerLink>> getPlayerLink(UUID playerUuid) {
@@ -248,6 +249,11 @@ public class WhitelistManager {
         return UUID.nameUUIDFromBytes(("OfflinePlayer:" + playerName).getBytes());
     }
 
-    public record ActivationResult(boolean success, String messageKey, WhitelistEntry entry) {
+    @Getter
+    @RequiredArgsConstructor
+    public static class ActivationResult {
+        private final boolean success;
+        private final String messageKey;
+        private final WhitelistEntry entry;
     }
 }
